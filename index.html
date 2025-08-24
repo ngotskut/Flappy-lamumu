@@ -1,21 +1,27 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
+<meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <title>Flappy Lamumu</title>
 <style>
-  :root{ --ui-bg:rgba(255,255,255,.92); --ui-radius:16px; --brand:#2563eb; }
+  :root{ --ui-bg:rgba(255,255,255,.96); --ui-radius:18px; --brand:#2563eb; }
   html,body{height:100%;margin:0}
   body{background:#6b8f99;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;overflow:hidden}
   #wrap{position:fixed;inset:0}
   #game{position:absolute;inset:0;display:block;background:linear-gradient(#cfefff,#bde6fd)}
   #score{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-weight:700;font-size:16px;pointer-events:none}
+
+  /* ===== centered start menu ===== */
+  #overlay{
+    position:absolute;inset:0;background:rgba(0,0,0,.35);
+    display:flex;align-items:center;justify-content:center;z-index:8;
+  }
   #startPanel{
-    position:absolute;left:50%;bottom:24px;transform:translateX(-50%);
+    width:min(680px,92vw);
     background:var(--ui-bg);backdrop-filter:saturate(1.2) blur(8px);
-    border-radius:var(--ui-radius);box-shadow:0 10px 30px rgba(0,0,0,.2);
-    padding:18px;max-width:min(680px,92vw);z-index:5
+    border-radius:var(--ui-radius);box-shadow:0 20px 60px rgba(0,0,0,.35);
+    padding:20px;z-index:9
   }
   #startPanel h2{margin:6px 0 10px;font-size:22px}
   .muted{color:#4b5563;font-size:12px}
@@ -27,7 +33,6 @@
   .btn{appearance:none;border:0;border-radius:999px;padding:10px 16px;font-weight:600;background:#e5e7eb;cursor:pointer}
   .btn.primary{background:var(--brand);color:#fff}
   input[type="text"]{width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;background:#fff}
-  @supports(padding:max(0px)){ #startPanel{padding-bottom:calc(18px + env(safe-area-inset-bottom))} }
 </style>
 </head>
 <body>
@@ -35,36 +40,39 @@
   <canvas id="game"></canvas>
   <div id="score">Score: 0</div>
 
-  <div id="startPanel">
-    <h2>Flappy Lamumu 🐮</h2>
-    <div class="muted">Tap / Click anywhere on the game to flap · Press <b>C</b> to switch character quickly</div>
-    <div style="margin:10px 0">
-      <input id="playerName" type="text" placeholder="Enter your name (optional)">
-    </div>
-    <div class="row grid-4">
-      <label class="card">
-        <img src="assets/lamumu1.png" alt="Lamumu #1"><div class="muted">Lamumu #1</div>
-        <div><input type="radio" name="char" value="0" checked> Use #1</div>
-      </label>
-      <label class="card">
-        <img src="assets/lamumu2.png" alt="Lamumu #2"><div class="muted">Lamumu #2</div>
-        <div><input type="radio" name="char" value="1"> Use #2</div>
-      </label>
-      <label class="card">
-        <img src="assets/lamumu3.png" alt="Lamumu #3"><div class="muted">Lamumu #3</div>
-        <div><input type="radio" name="char" value="2"> Use #3</div>
-      </label>
-      <label class="card">
-        <img src="assets/lamumu4.png" alt="Lamumu #4"><div class="muted">Lamumu #4</div>
-        <div><input type="radio" name="char" value="3"> Use #4</div>
-      </label>
-    </div>
-    <div class="actions">
-      <button id="btnStart" class="btn primary">Start</button>
-      <button id="btnLb" class="btn" type="button">Leaderboard (coming soon)</button>
-    </div>
-    <div class="muted" style="text-align:center;margin-top:6px">
-      Tip: You can change character during play by pressing <b>C</b>.
+  <!-- Centered menu + backdrop -->
+  <div id="overlay">
+    <div id="startPanel">
+      <h2>Flappy Lamumu 🐮</h2>
+      <div class="muted">Tap / Click anywhere on the game to flap · Press <b>C</b> to switch character quickly</div>
+      <div style="margin:10px 0">
+        <input id="playerName" type="text" placeholder="Enter your name (optional)">
+      </div>
+      <div class="row grid-4">
+        <label class="card">
+          <img src="assets/lamumu1.png" alt="Lamumu #1"><div class="muted">Lamumu #1</div>
+          <div><input type="radio" name="char" value="0" checked> Use #1</div>
+        </label>
+        <label class="card">
+          <img src="assets/lamumu2.png" alt="Lamumu #2"><div class="muted">Lamumu #2</div>
+          <div><input type="radio" name="char" value="1"> Use #2</div>
+        </label>
+        <label class="card">
+          <img src="assets/lamumu3.png" alt="Lamumu #3"><div class="muted">Lamumu #3</div>
+          <div><input type="radio" name="char" value="2"> Use #3</div>
+        </label>
+        <label class="card">
+          <img src="assets/lamumu4.png" alt="Lamumu #4"><div class="muted">Lamumu #4</div>
+          <div><input type="radio" name="char" value="3"> Use #4</div>
+        </label>
+      </div>
+      <div class="actions">
+        <button id="btnStart" class="btn primary">Start</button>
+        <button id="btnLb" class="btn" type="button">Leaderboard (coming soon)</button>
+      </div>
+      <div class="muted" style="text-align:center;margin-top:6px">
+        Tip: You can change character during play by pressing <b>C</b>.
+      </div>
     </div>
   </div>
 </div>
@@ -84,7 +92,7 @@
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
   const scoreEl = document.getElementById('score');
-  const startPanel = document.getElementById('startPanel');
+  const overlay = document.getElementById('overlay');
   const btnStart = document.getElementById('btnStart');
   const btnLb = document.getElementById('btnLb');
 
@@ -105,12 +113,11 @@
   // ---------- GAME STATE ----------
   const state = {
     running:false,
-    started:false,
     score:0,
     time:0,
     speed:190,
     speedMax:420,
-    speedGain:0.045,
+    speedGain:0.045, // <- HANYA bertambah perlahan dari skor, TIDAK dari bonus
     gravity:900,
     flapVel:-350,
     charIndex:0,
@@ -120,7 +127,7 @@
   const pipes = [];
   const PIPE = {
     width: Math.max(80, Math.floor(W*0.08)),
-    gapBase: Math.max(160, Math.floor(H*0.28)),  // constant/easy
+    gapBase: Math.max(160, Math.floor(H*0.28)),
     spawnMin: Math.max(240, Math.floor(W*0.36)),
     spawnMax: Math.max(280, Math.floor(W*0.42))
   };
@@ -147,7 +154,7 @@
   const charImgs = CHAR_SRCS.map(src => { const im = new Image(); im.src = src; return im; });
   const bonusImg = new Image(); bonusImg.src = BONUS_SRC;
 
-  // ---------- INPUT (ON CANVAS ONLY) ----------
+  // ---------- INPUT (canvas only) ----------
   function flap(){ if(state.running){ player.vy = state.flapVel; } }
   canvas.addEventListener('mousedown', ()=>flap());
   canvas.addEventListener('touchstart', (e)=>{ e.preventDefault(); flap(); }, {passive:false});
@@ -169,7 +176,6 @@
     player.sprite = charImgs[state.charIndex];
 
     state.running = true;
-    state.started = true;
     state.score = 0;
     state.time = 0;
     state.speed = 190;
@@ -181,7 +187,7 @@
     pipes.length = 0;
     bonuses.length = 0;
 
-    startPanel.style.display = 'none';
+    overlay.style.display = 'none';
   }
 
   // ---------- SPAWN ----------
@@ -194,13 +200,14 @@
     return (W - last.x) >= rand(PIPE.spawnMin, PIPE.spawnMax);
   }
   function spawnPipe(){
-    const gap = PIPE.gapBase;
+    const gap = PIPE.gapBase; // gap tidak mengecil
     const topY = rand(50, Math.max(50, H-gap-120));
     const p = { x: W+10, y: topY, width: PIPE.width, gap, passed:false };
     pipes.push(p);
     if (Math.random() < BONUS.chance) spawnBonusAtPipe(p);
   }
   function spawnBonusAtPipe(pipe){
+    // spawn di tengah gap (dengan sedikit variasi aman)
     const gapMid = pipe.y + pipe.gap/2;
     const y = clamp(gapMid + (Math.random()-0.5)*2*BONUS.yOffset, pipe.y+20, pipe.y+pipe.gap-20);
     bonuses.push({ x: pipe.x + PIPE.width + 120, y, size: BONUS.sizeBase, angle:0, collected:false });
@@ -220,6 +227,7 @@
 
   function update(dt){
     state.time += dt;
+    // Kecepatan hanya naik perlahan berdasar skor (bukan karena bonus)
     state.speed = Math.min(state.speedMax, 190 + state.score*state.speedGain*30);
 
     if (shouldSpawnPipe()) spawnPipe();
@@ -247,7 +255,7 @@
     }
     if (player.y > H-2 || player.y < -20) return gameOver();
 
-    // bonuses
+    // bonuses (NO speed-up here)
     for (let i=bonuses.length-1;i>=0;i--){
       const b = bonuses[i];
       b.x -= state.speed*dt; b.angle += 2.0*dt;
@@ -290,13 +298,13 @@
 
   function gameOver(){
     state.running = false;
-    startPanel.style.display = 'block';
+    overlay.style.display = 'flex'; // tampilkan lagi menu di tengah
   }
 
   // helpers
   function circleRect(cx,cy,cr, rx,ry,rw,rh){
-    const tx = clamp(cx, rx, rx+rw);
-    const ty = clamp(cy, ry, ry+rh);
+    const tx = Math.max(rx, Math.min(cx, rx+rw));
+    const ty = Math.max(ry, Math.min(cy, ry+rh));
     const dx=cx-tx, dy=cy-ty;
     return dx*dx+dy*dy <= cr*cr;
   }
