@@ -6,18 +6,17 @@
 <title>Flappy Lamumu 🐄</title>
 <style>
   :root{
-    --bg:#7fa7af;          /* page background outside game */
+    --bg:#7fa7af;          /* page bg di luar canvas */
     --card:#ffffff;
     --shadow:0 10px 30px rgba(0,0,0,.18);
-    --blue:#1949bd;
   }
   html,body{height:100%;margin:0;background:var(--bg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,sans-serif}
-  /* game area fills screen */
+  /* canvas full layar */
   #wrap{position:fixed;inset:0;display:grid;place-items:center}
   canvas{display:block;width:100vw;height:100vh;background:linear-gradient(#bfeeff,#b2e1f7)}
-  /* top score text */
+  /* score di atas */
   #hud{position:fixed;top:8px;left:0;right:0;text-align:center;font-weight:700;font-size:14px;color:#111;user-select:none;pointer-events:none;}
-  /* overlay (start) */
+  /* overlay start */
   .overlay{
     position:fixed;left:0;right:0;bottom:0;background:var(--card);
     margin:0 auto 0;max-width:min(680px,94vw);
@@ -27,18 +26,15 @@
   .title{font-size:22px;font-weight:800;text-align:center;margin:2px 0 8px;}
   .sub{font-size:14px;color:#555;text-align:center;margin-bottom:10px}
   .grid{display:grid;gap:14px;grid-template-columns:repeat(4,1fr);margin:12px 0}
-  .card{
-    border:1px solid #e5e7eb;border-radius:12px;padding:10px;text-align:center
-  }
+  .card{border:1px solid #e5e7eb;border-radius:12px;padding:10px;text-align:center}
   .card img{width:72px;height:72px;object-fit:contain;image-rendering:auto}
   .row{display:flex;gap:8px;align-items:center;justify-content:center;margin-top:6px}
   .actions{display:flex;gap:10px;justify-content:center;margin-top:12px}
   button{border:0;border-radius:999px;padding:10px 16px;font-weight:700;cursor:pointer}
   .primary{background:#2563eb;color:#fff}
   .ghost{background:#eef2ff;color:#1f2937}
-  input[type="text"]{
-    width:100%;padding:10px 12px;border-radius:10px;border:1px solid #e5e7eb;font-size:14px
-  }
+  button[disabled]{opacity:.5;cursor:not-allowed}
+  input[type="text"]{width:100%;padding:10px 12px;border-radius:10px;border:1px solid #e5e7eb;font-size:14px}
   .tip{font-size:12px;color:#6b7280;text-align:center;margin-top:8px}
   @media (min-width:900px){
     .overlay{border-radius:20px;padding:20px 22px;bottom:auto;top:50%;transform:translateY(-50%)}
@@ -54,8 +50,11 @@
 <!-- START OVERLAY -->
 <div id="startOverlay" class="overlay">
   <div class="title">Flappy Lamumu 🐄</div>
+  <div id="loadInfo" class="sub">Loading assets…</div>
   <div class="sub">Tap / Click anywhere to flap · Press <b>C</b> to switch character quickly</div>
+
   <input id="playerName" type="text" placeholder="Enter your name" autocomplete="off" />
+
   <div class="grid" style="margin-top:12px">
     <label class="card">
       <img src="assets/Lamumu1.png" alt="Lamumu #1">
@@ -74,49 +73,51 @@
       <div class="row"><input type="radio" name="skin" value="3"> Use #4</div>
     </label>
   </div>
+
   <div class="actions">
-    <button id="startBtn" class="primary">Start</button>
+    <button id="startBtn" class="primary" disabled>Start</button>
     <button id="lbBtn" class="ghost" title="Coming soon">Leaderboard (coming soon)</button>
   </div>
   <div class="tip">Tip: You can change character during play by pressing <b>C</b>.</div>
 </div>
 
 <!-- AUDIO -->
-<audio id="bgm" src="assets/sweet-country-farm-music-full-354815.mp3" loop preload="auto"></audio>
+<audio id="bgm"   src="assets/sweet-country-farm-music-full-354815.mp3" loop preload="auto"></audio>
 <audio id="sfxOver" src="assets/cow-moo-390282.mp3" preload="auto"></audio>
 
 <script>
 (()=>{
-// ==================== CONFIG (speed-only difficulty) ====================
+// ==================== CONFIG ====================
 const CONFIG = {
   // physics
-  gravity: 0.28,           // slightly lighter fall
-  flapImpulse: -6.2,       // slightly higher flap
+  gravity: 0.28,
+  flapImpulse: -6.2,
 
-  // pipes (fixed gap & spacing)
+  // pipes (fixed; tidak menyempit/merapat)
   pipeGap: 240,
   pipeSpacing: 340,
   pipeWidth: 90,
 
-  // speeds
+  // speed-only difficulty
   startSpeed: 2.0,
   maxSpeed:   3.8,
   difficulty: { stepScore: 50, stepPct: 0.10 },
   easyPipesCount: 4,
 
-  // bonus coin
+  // bonus
   bonus: {
     value: 100,
+    size: 64,                 // ← lebih besar
+    spinSpeed: 1.8,           // rad/s
     spawnEveryMs: [6000, 9000],
-    yClampMin: 0.18,
-    yClampMax: 0.82,
-    size: 36,
-    spinSpeed: 1.8 // rad/s
+    // pita spawn (fraksi tinggi layar) — HANYA di area ini
+    // Silakan sesuaikan sampai cocok dg “garis hitam” kamu.
+    spawnBand: [0.58, 0.78]   // contoh: antara 58% s/d 78% tinggi layar
   },
 
   // cow
-  cowSize: 54,           // displayed size in px
-  cowX:   110            // x-position
+  cowSize: 54,
+  cowX:   110
 };
 
 // ==================== helpers ====================
@@ -129,29 +130,28 @@ function getCurrentSpeed(score, pipesPassed){
   return lerp(CONFIG.startSpeed, CONFIG.maxSpeed, t);
 }
 function randRange(a,b){return a + Math.random()*(b-a)}
+const $ = s=>document.querySelector(s);
 
 // ==================== DOM ====================
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-const scoreText = document.getElementById('scoreText');
-const startOverlay = document.getElementById('startOverlay');
-const playerNameInput = document.getElementById('playerName');
-const startBtn  = document.getElementById('startBtn');
-const lbBtn     = document.getElementById('lbBtn');
-const bgm = document.getElementById('bgm');
-const sfxOver = document.getElementById('sfxOver');
+const canvas = $('#game'), ctx = canvas.getContext('2d');
+const scoreText = $('#scoreText');
+const startOverlay = $('#startOverlay');
+const playerNameInput = $('#playerName');
+const loadInfo = $('#loadInfo');
+const startBtn  = $('#startBtn');
+const bgm = $('#bgm'), sfxOver = $('#sfxOver');
 
 let W=innerWidth, H=innerHeight;
 function resize(){ W=innerWidth; H=innerHeight; canvas.width=W; canvas.height=H; }
 addEventListener('resize', resize, {passive:true}); resize();
 
-// unlock audio on first user gesture
+// unlock audio on first gesture
 const unlock = ()=>{ [bgm,sfxOver].forEach(a=>{ try{a.muted=false; a.play().then(()=>a.pause()).catch(()=>{});}catch{} }); 
   removeEventListener('pointerdown', unlock); removeEventListener('click', unlock);
 };
 addEventListener('pointerdown', unlock, {once:true}); addEventListener('click', unlock, {once:true});
 
-// ==================== assets ====================
+// ==================== assets & preload ====================
 const cowImgs = [new Image(), new Image(), new Image(), new Image()];
 cowImgs[0].src = 'assets/Lamumu1.png';
 cowImgs[1].src = 'assets/Lamumu2.png';
@@ -159,26 +159,38 @@ cowImgs[2].src = 'assets/Lamumu3.png';
 cowImgs[3].src = 'assets/Lamumu4.png';
 const bonusImg = new Image(); bonusImg.src='assets/bonus.png';
 
+function loadImage(img){
+  return new Promise((resolve,reject)=>{
+    if(img.complete && img.naturalWidth) return resolve();
+    img.onload=()=>resolve();
+    img.onerror=()=>reject(new Error('Failed: '+img.src));
+  });
+}
+
+(async function preload(){
+  try{
+    await Promise.all([...cowImgs.map(loadImage), loadImage(bonusImg)]);
+    loadInfo.textContent = 'Assets loaded. Ready!';
+    startBtn.disabled = false;
+  }catch(e){
+    loadInfo.textContent = 'Some images failed to load. Check file names & paths in /assets.';
+    startBtn.disabled = false; // tetap bisa main dengan fallback kotak
+    console.warn(e);
+  }
+})();
+
 // ==================== game state ====================
 let running=false, gameOver=false;
-let score=0, best=0;
-let pipes=[]; // each: {x, gapY}
-let pipesPassed=0;
-let pipeSpeed = CONFIG.startSpeed;
-
+let score=0, pipes=[], pipesPassed=0, pipeSpeed=CONFIG.startSpeed;
 let cowY = H*0.4, velY = 0, skin=0, name='';
-let nextPipeX = W + 300; // where to spawn next
-let bonus=null; // {x,y,angle}
-let nextBonusAt = 0;
+let bonus=null, nextBonusAt=0;
 
-// ==================== input ====================
 addEventListener('pointerdown', ()=>{ if(running && !gameOver) flap(); });
 addEventListener('keydown', e=>{
   if(e.code==='Space'){ e.preventDefault(); if(running && !gameOver) flap(); }
   if(e.key==='c' || e.key==='C'){ if(running && !gameOver){ skin=(skin+1)%cowImgs.length; } }
 });
 
-// ==================== start/restart ====================
 startBtn.addEventListener('click', ()=>{
   name = playerNameInput.value.trim().slice(0,24) || 'Player';
   const picked = document.querySelector('input[name="skin"]:checked');
@@ -191,143 +203,104 @@ function startGame(){
   score=0; scoreText.textContent='0';
   pipes=[]; pipesPassed=0; pipeSpeed=CONFIG.startSpeed;
   cowY=H*0.4; velY=0; gameOver=false; running=true;
-  nextPipeX = W + 200;
   scheduleNextBonus();
   bgm.currentTime=0; bgm.volume=.6; bgm.play().catch(()=>{});
 }
 
-// ==================== core mechanics ====================
 function flap(){ velY = CONFIG.flapImpulse; }
 
+// spawn pipe
 function spawnPipe(){
-  // choose a center Y that keeps the gap entirely on-screen
-  const safeMargin = 60;
-  const minCenter = safeMargin + CONFIG.pipeGap/2;
-  const maxCenter = H - safeMargin - CONFIG.pipeGap/2;
+  const safe = 60;
+  const minCenter = safe + CONFIG.pipeGap/2;
+  const maxCenter = H - safe - CONFIG.pipeGap/2;
   const centerY = randRange(minCenter, maxCenter);
   pipes.push({ x: W + 20, gapY: centerY });
 }
 
 function scheduleNextBonus(){
-  const min = CONFIG.bonus.spawnEveryMs[0];
-  const max = CONFIG.bonus.spawnEveryMs[1];
-  nextBonusAt = performance.now() + randRange(min, max);
+  const [mi,ma] = CONFIG.bonus.spawnEveryMs;
+  nextBonusAt = performance.now() + randRange(mi, ma);
 }
-
 function maybeSpawnBonus(t){
-  if(bonus || t < nextBonusAt) return;
-  const minY = H * CONFIG.bonus.yClampMin;
-  const maxY = H * CONFIG.bonus.yClampMax;
-  bonus = {
-    x: W + 80,
-    y: randRange(minY, maxY),
-    angle: 0
-  };
+  if(bonus || !running || t < nextBonusAt) return;
+  const [bandMin, bandMax] = CONFIG.bonus.spawnBand; // 0..1
+  const minY = H * Math.max(0, Math.min(1, bandMin));
+  const maxY = H * Math.max(0, Math.min(1, bandMax));
+  bonus = { x: W + 100, y: randRange(minY, maxY), angle: 0 };
 }
 
+// main update
 function update(dt){
   if(!running || gameOver) return;
 
-  // physics
   velY += CONFIG.gravity;
   cowY += velY;
 
-  // speed progression
   pipeSpeed = getCurrentSpeed(score, pipesPassed);
 
-  // spawn pipes by spacing
-  if(pipes.length===0){
-    spawnPipe(); nextPipeX = W + CONFIG.pipeSpacing;
-  }else{
-    // ensure a new pipe appears when last one is far enough
-    if(pipes[pipes.length-1].x < W - CONFIG.pipeSpacing){
-      spawnPipe();
-    }
+  if(pipes.length===0 || pipes[pipes.length-1].x < W - CONFIG.pipeSpacing){
+    spawnPipe();
   }
 
-  // move pipes & scoring & collision
   for(let i=pipes.length-1;i>=0;i--){
-    const p = pipes[i];
-    p.x -= pipeSpeed;
+    const p = pipes[i]; p.x -= pipeSpeed;
 
-    // draw handled in render()
-
-    // passed check (middle of gap)
     const passX = p.x + CONFIG.pipeWidth/2;
     if(!p.passed && passX < CONFIG.cowX){
-      p.passed = true;
-      score += 1;
-      scoreText.textContent = String(score);
-      pipesPassed += 1;
+      p.passed = true; score += 1; scoreText.textContent = String(score); pipesPassed += 1;
     }
+    if(p.x + CONFIG.pipeWidth < -20) pipes.splice(i,1);
 
-    // remove off-screen
-    if(p.x + CONFIG.pipeWidth < -20){
-      pipes.splice(i,1);
-    }
-
-    // collision check with cow
-    const cx = CONFIG.cowX, cy = cowY, half = CONFIG.cowSize*0.38;
-    const inPipeX = (cx+half) > p.x && (cx-half) < (p.x+CONFIG.pipeWidth);
-    if(inPipeX){
-      const topBottomClear = (cy-half) > (p.gapY - CONFIG.pipeGap/2) &&
-                             (cy+half) < (p.gapY + CONFIG.pipeGap/2);
-      if(!topBottomClear){
-        doGameOver();
-      }
+    // collision
+    const half = CONFIG.cowSize*0.38, cx = CONFIG.cowX, cy = cowY;
+    const inX = (cx+half) > p.x && (cx-half) < (p.x+CONFIG.pipeWidth);
+    if(inX){
+      const topClear = (cy-half) > (p.gapY - CONFIG.pipeGap/2);
+      const botClear = (cy+half) < (p.gapY + CONFIG.pipeGap/2);
+      if(!(topClear && botClear)) doGameOver();
     }
   }
 
-  // floor / ceiling collision
+  // floor/ceiling
   const margin = CONFIG.cowSize*0.5;
-  if(cowY > H - margin || cowY < margin){
-    doGameOver();
-  }
+  if(cowY > H - margin || cowY < margin) doGameOver();
 
-  // bonus spawn & update
+  // bonus
   const now = performance.now();
   maybeSpawnBonus(now);
   if(bonus){
     bonus.x -= pipeSpeed;
     bonus.angle += CONFIG.bonus.spinSpeed * (dt/1000);
-    // pickup?
-    const dx = (CONFIG.cowX - bonus.x);
-    const dy = (cowY - bonus.y);
-    const dist2 = dx*dx + dy*dy;
+
+    // pickup
+    const dx = CONFIG.cowX - bonus.x, dy = cowY - bonus.y;
     const r = (CONFIG.cowSize*0.45 + CONFIG.bonus.size*0.5);
-    if(dist2 < r*r){
-      score += CONFIG.bonus.value;
-      scoreText.textContent = String(score);
-      bonus = null;
-      scheduleNextBonus();
-    }else if(bonus.x < -60){
-      bonus = null;
-      scheduleNextBonus();
+    if(dx*dx + dy*dy < r*r){
+      score += CONFIG.bonus.value; scoreText.textContent = String(score);
+      bonus = null; scheduleNextBonus();
+    }else if(bonus.x < -80){
+      bonus = null; scheduleNextBonus();
     }
   }
 }
 
 function doGameOver(){
   if(gameOver) return;
-  gameOver = true; running=false;
-  bgm.pause();
+  gameOver = true; running=false; bgm.pause();
   try{ sfxOver.currentTime=0; sfxOver.play().catch(()=>{});}catch{}
-  // show start overlay again after short delay
   setTimeout(()=>{ startOverlay.style.display='block'; }, 500);
 }
 
-// ==================== render ====================
+// render
 function render(){
-  // background is already gradient by CSS; we can draw subtle sky tint if needed
   ctx.clearRect(0,0,W,H);
 
   // pipes
   ctx.fillStyle = '#1f4ed8';
   for(const p of pipes){
-    const x = p.x, w = CONFIG.pipeWidth;
-    const gapH = CONFIG.pipeGap;
-    const topH = p.gapY - gapH/2;
-    const botY = p.gapY + gapH/2;
+    const x = p.x, w = CONFIG.pipeWidth, gapH=CONFIG.pipeGap;
+    const topH = p.gapY - gapH/2, botY = p.gapY + gapH/2;
     ctx.fillRect(x, 0, w, Math.max(0, topH));
     ctx.fillRect(x, botY, w, H - botY);
   }
@@ -337,13 +310,11 @@ function render(){
     const s = CONFIG.bonus.size;
     const x = bonus.x, y = bonus.y, a = bonus.angle;
     if(bonusImg.complete && bonusImg.naturalWidth){
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate(a);
+      ctx.save(); ctx.translate(x,y); ctx.rotate(a);
       ctx.drawImage(bonusImg, -s/2, -s/2, s, s);
       ctx.restore();
     }else{
-      // fallback: colored rotating disc
+      // fallback disc
       ctx.save(); ctx.translate(x,y); ctx.rotate(a);
       ctx.fillStyle='#000'; ctx.beginPath(); ctx.arc(0,0,s*0.5,0,Math.PI*2); ctx.fill();
       ctx.restore();
@@ -356,25 +327,20 @@ function render(){
   if(img.complete && img.naturalWidth){
     ctx.drawImage(img, CONFIG.cowX - size/2, cowY - size/2, size, size);
   }else{
-    // fallback box
+    // fallback: kotak hitam => ini indikator path gambar salah
     ctx.fillStyle='#222';
     ctx.fillRect(CONFIG.cowX - size/2, cowY - size/2, size, size);
   }
 }
 
-// ==================== main loop ====================
+// loop
 let last = performance.now();
 function loop(now){
   const dt = now - last; last = now;
-  update(dt);
-  render();
+  update(dt); render();
   requestAnimationFrame(loop);
 }
 requestAnimationFrame(loop);
-
-// ==================== pointer capture note ====================
-// Keep overlay clickable; when overlay is visible, canvas is still behind it,
-// but overlay sits above it (higher z-index). Inputs are naturally tappable.
 })();
 </script>
 </body>
