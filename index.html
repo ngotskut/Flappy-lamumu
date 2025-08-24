@@ -12,16 +12,11 @@
   #game{position:absolute;inset:0;display:block;background:linear-gradient(#cfefff,#bde6fd)}
   #score{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-weight:700;font-size:16px;pointer-events:none}
 
-  /* ===== centered start menu ===== */
-  #overlay{
-    position:absolute;inset:0;background:rgba(0,0,0,.35);
-    display:flex;align-items:center;justify-content:center;z-index:8;
-  }
+  /* centered start menu */
+  #overlay{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:8}
   #startPanel{
-    width:min(680px,92vw);
-    background:var(--ui-bg);backdrop-filter:saturate(1.2) blur(8px);
-    border-radius:var(--ui-radius);box-shadow:0 20px 60px rgba(0,0,0,.35);
-    padding:20px;z-index:9
+    width:min(680px,92vw);background:var(--ui-bg);backdrop-filter:saturate(1.2) blur(8px);
+    border-radius:var(--ui-radius);box-shadow:0 20px 60px rgba(0,0,0,.35);padding:20px;z-index:9
   }
   #startPanel h2{margin:6px 0 10px;font-size:22px}
   .muted{color:#4b5563;font-size:12px}
@@ -40,14 +35,11 @@
   <canvas id="game"></canvas>
   <div id="score">Score: 0</div>
 
-  <!-- Centered menu + backdrop -->
   <div id="overlay">
     <div id="startPanel">
       <h2>Flappy Lamumu 🐮</h2>
       <div class="muted">Tap / Click anywhere on the game to flap · Press <b>C</b> to switch character quickly</div>
-      <div style="margin:10px 0">
-        <input id="playerName" type="text" placeholder="Enter your name (optional)">
-      </div>
+      <div style="margin:10px 0"><input id="playerName" type="text" placeholder="Enter your name (optional)"></div>
       <div class="row grid-4">
         <label class="card">
           <img src="assets/lamumu1.png" alt="Lamumu #1"><div class="muted">Lamumu #1</div>
@@ -70,9 +62,7 @@
         <button id="btnStart" class="btn primary">Start</button>
         <button id="btnLb" class="btn" type="button">Leaderboard (coming soon)</button>
       </div>
-      <div class="muted" style="text-align:center;margin-top:6px">
-        Tip: You can change character during play by pressing <b>C</b>.
-      </div>
+      <div class="muted" style="text-align:center;margin-top:6px">Tip: You can change character during play by pressing <b>C</b>.</div>
     </div>
   </div>
 </div>
@@ -94,219 +84,150 @@
   const scoreEl = document.getElementById('score');
   const overlay = document.getElementById('overlay');
   const btnStart = document.getElementById('btnStart');
-  const btnLb = document.getElementById('btnLb');
 
   // ---------- SIZE ----------
-  let W = 0, H = 0, DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-  function resize(){
-    W = Math.floor(window.innerWidth);
-    H = Math.floor(window.innerHeight);
-    canvas.width = Math.floor(W*DPR);
-    canvas.height = Math.floor(H*DPR);
-    canvas.style.width = W+'px';
-    canvas.style.height = H+'px';
+  let W=0,H=0,DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
+  function resize(){ W=innerWidth|0; H=innerHeight|0;
+    canvas.width=(W*DPR)|0; canvas.height=(H*DPR)|0; canvas.style.width=W+'px'; canvas.style.height=H+'px';
     ctx.setTransform(DPR,0,0,DPR,0,0);
   }
-  window.addEventListener('resize', resize, {passive:true});
-  resize();
+  addEventListener('resize',resize,{passive:true}); resize();
 
   // ---------- GAME STATE ----------
   const state = {
     running:false,
     score:0,
     time:0,
-    speed:190,
+    speedBase:190,
     speedMax:420,
-    speedGain:0.045, // <- HANYA bertambah perlahan dari skor, TIDAK dari bonus
+    speed:190,
+    pipesPassed:0,       // <— hanya ini yang mempengaruhi speed
+    speedPerPipe:2.2,    // naik pelan tiap pipa lolos
     gravity:900,
-    flapVel:-350,
+    flapVel:-430,        // <— FLAP LEBIH TINGGI
     charIndex:0,
   };
 
   // pipes
-  const pipes = [];
+  const pipes=[];
   const PIPE = {
-    width: Math.max(80, Math.floor(W*0.08)),
-    gapBase: Math.max(160, Math.floor(H*0.28)),
-    spawnMin: Math.max(240, Math.floor(W*0.36)),
-    spawnMax: Math.max(280, Math.floor(W*0.42))
+    width: Math.max(80,(W*0.08)|0),
+    gapBase: Math.max(160,(H*0.28)|0),
+    spawnMin: Math.max(240,(W*0.36)|0),
+    spawnMax: Math.max(280,(W*0.42)|0)
   };
 
   // bonus
-  const bonuses = [];
-  const BONUS = {
-    sizeBase: Math.max(34, Math.floor(Math.min(W,H)*0.05)),
-    rotateSpeed: 2.0,
-    chance: 0.65,
-    yOffset: 20
+  const bonuses=[];
+  const BONUS={
+    sizeBase: Math.max(34,(Math.min(W,H)*0.05)|0),
+    rotateSpeed:2.0,
+    chance:0.65,
+    yOffset:20
   };
 
   // player
-  const player = {
-    x: Math.max(80, Math.floor(W*0.18)),
-    y: Math.floor(H*0.45),
-    vy: 0,
-    r: Math.max(22, Math.floor(Math.min(W,H)*0.024)),
-    sprite: null
-  };
+  const player={ x:Math.max(80,(W*0.18)|0), y:(H*0.45)|0, vy:0, r:Math.max(22,(Math.min(W,H)*0.024)|0), sprite:null };
 
-  // ---------- LOAD IMAGES ----------
-  const charImgs = CHAR_SRCS.map(src => { const im = new Image(); im.src = src; return im; });
-  const bonusImg = new Image(); bonusImg.src = BONUS_SRC;
+  // images
+  const charImgs = CHAR_SRCS.map(s=>{const im=new Image(); im.src=s; return im;});
+  const bonusImg = new Image(); bonusImg.src=BONUS_SRC;
 
-  // ---------- INPUT (canvas only) ----------
-  function flap(){ if(state.running){ player.vy = state.flapVel; } }
-  canvas.addEventListener('mousedown', ()=>flap());
-  canvas.addEventListener('touchstart', (e)=>{ e.preventDefault(); flap(); }, {passive:false});
-  window.addEventListener('keydown', e=>{
+  // input
+  function flap(){ if(state.running){ player.vy=state.flapVel; } }
+  canvas.addEventListener('mousedown',flap);
+  canvas.addEventListener('touchstart',e=>{e.preventDefault();flap();},{passive:false});
+  addEventListener('keydown',e=>{
     if(e.code==='Space'){ e.preventDefault(); flap(); }
-    if(e.key==='c' || e.key==='C'){
-      state.charIndex = (state.charIndex+1) % charImgs.length;
-      player.sprite = charImgs[state.charIndex];
-    }
+    if(e.key==='c'||e.key==='C'){ state.charIndex=(state.charIndex+1)%charImgs.length; player.sprite=charImgs[state.charIndex];}
   });
 
-  // ---------- UI ----------
-  btnStart.addEventListener('click', startGame);
-  btnLb.addEventListener('click', ()=>alert('Leaderboard will be added soon.'));
-
+  // UI
+  btnStart.addEventListener('click',startGame);
   function startGame(){
-    const selected = document.querySelector('input[name="char"]:checked');
-    state.charIndex = selected ? +selected.value : 0;
-    player.sprite = charImgs[state.charIndex];
-
-    state.running = true;
-    state.score = 0;
-    state.time = 0;
-    state.speed = 190;
-
-    player.x = Math.max(80, Math.floor(W*0.18));
-    player.y = Math.floor(H*0.45);
-    player.vy = 0;
-
-    pipes.length = 0;
-    bonuses.length = 0;
-
-    overlay.style.display = 'none';
+    const sel=document.querySelector('input[name="char"]:checked'); state.charIndex=sel?+sel.value:0;
+    player.sprite=charImgs[state.charIndex];
+    state.running=true; state.score=0; state.time=0; state.pipesPassed=0; state.speed=state.speedBase;
+    player.x=Math.max(80,(W*0.18)|0); player.y=(H*0.45)|0; player.vy=0;
+    pipes.length=0; bonuses.length=0;
+    overlay.style.display='none';
   }
 
-  // ---------- SPAWN ----------
-  const rand = (a,b)=>a+Math.random()*(b-a);
-  const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
-
-  function shouldSpawnPipe(){
-    if (pipes.length===0) return true;
-    const last = pipes[pipes.length-1];
-    return (W - last.x) >= rand(PIPE.spawnMin, PIPE.spawnMax);
-  }
+  // spawn
+  const rand=(a,b)=>a+Math.random()*(b-a);
+  const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+  function needPipe(){ if(!pipes.length) return true; const last=pipes[pipes.length-1]; return (W-last.x) >= rand(PIPE.spawnMin,PIPE.spawnMax); }
   function spawnPipe(){
-    const gap = PIPE.gapBase; // gap tidak mengecil
-    const topY = rand(50, Math.max(50, H-gap-120));
-    const p = { x: W+10, y: topY, width: PIPE.width, gap, passed:false };
-    pipes.push(p);
-    if (Math.random() < BONUS.chance) spawnBonusAtPipe(p);
+    const gap=PIPE.gapBase, top=rand(50, Math.max(50,H-gap-120));
+    const p={x:W+10,y:top,width:PIPE.width,gap,passed:false}; pipes.push(p);
+    if(Math.random()<BONUS.chance) spawnBonusAtPipe(p);
   }
-  function spawnBonusAtPipe(pipe){
-    // spawn di tengah gap (dengan sedikit variasi aman)
-    const gapMid = pipe.y + pipe.gap/2;
-    const y = clamp(gapMid + (Math.random()-0.5)*2*BONUS.yOffset, pipe.y+20, pipe.y+pipe.gap-20);
-    bonuses.push({ x: pipe.x + PIPE.width + 120, y, size: BONUS.sizeBase, angle:0, collected:false });
+  function spawnBonusAtPipe(p){
+    const mid = p.y + p.gap/2;
+    const y = clamp(mid + (Math.random()-0.5)*2*BONUS.yOffset, p.y+20, p.y+p.gap-20);
+    bonuses.push({x:p.x + PIPE.width + 120, y, size:BONUS.sizeBase, angle:0});
   }
 
-  // ---------- LOOP ----------
-  let last = performance.now();
+  // loop
+  let last=performance.now();
   function loop(now){
-    const dt = Math.min(0.033, (now-last)/1000);
-    last = now;
-
-    if (state.running) update(dt);
-    draw();
-    requestAnimationFrame(loop);
+    const dt=Math.min(0.033,(now-last)/1000); last=now;
+    if(state.running) update(dt);
+    draw(); requestAnimationFrame(loop);
   }
   requestAnimationFrame(loop);
 
   function update(dt){
-    state.time += dt;
-    // Kecepatan hanya naik perlahan berdasar skor (bukan karena bonus)
-    state.speed = Math.min(state.speedMax, 190 + state.score*state.speedGain*30);
+    state.time+=dt;
+    // speed hanya naik karena pipesPassed, bukan karena score
+    state.speed = Math.min(state.speedMax, state.speedBase + state.pipesPassed*state.speedPerPipe);
 
-    if (shouldSpawnPipe()) spawnPipe();
+    if(needPipe()) spawnPipe();
 
-    // move pipes & score
-    for (let i=pipes.length-1;i>=0;i--){
-      const p = pipes[i];
-      p.x -= state.speed * dt;
-      if (p.x + p.width < -10) pipes.splice(i,1);
-      if (!p.passed && p.x + p.width < player.x){
-        p.passed = true; state.score += 1;
-      }
+    for(let i=pipes.length-1;i>=0;i--){
+      const p=pipes[i]; p.x -= state.speed*dt;
+      if(p.x + p.width < -10) pipes.splice(i,1);
+      if(!p.passed && p.x + p.width < player.x){ p.passed=true; state.pipesPassed++; state.score += 1; }
     }
 
-    // physics
-    player.vy += state.gravity * dt;
-    player.y  += player.vy * dt;
+    player.vy += state.gravity*dt; player.y += player.vy*dt;
 
-    // collisions
-    for (const p of pipes){
-      if (circleRect(player.x,player.y,player.r, p.x,0,p.width,p.y) ||
-          circleRect(player.x,player.y,player.r, p.x,p.y+p.gap,p.width,H-(p.y+p.gap))){
-        return gameOver();
-      }
+    for(const p of pipes){
+      if(circleRect(player.x,player.y,player.r, p.x,0,p.width,p.y) ||
+         circleRect(player.x,player.y,player.r, p.x,p.y+p.gap,p.width,H-(p.y+p.gap))){ return gameOver(); }
     }
-    if (player.y > H-2 || player.y < -20) return gameOver();
+    if(player.y>H-2 || player.y<-20) return gameOver();
 
-    // bonuses (NO speed-up here)
-    for (let i=bonuses.length-1;i>=0;i--){
-      const b = bonuses[i];
-      b.x -= state.speed*dt; b.angle += 2.0*dt;
-      if (!b.collected && dist(player.x,player.y,b.x,b.y) < (player.r + b.size*0.5*0.8)){
-        state.score += 100; bonuses.splice(i,1); continue;
-      }
-      if (b.x < -80) bonuses.splice(i,1);
+    for(let i=bonuses.length-1;i>=0;i--){
+      const b=bonuses[i]; b.x -= state.speed*dt; b.angle += BONUS.rotateSpeed*dt;
+      if(dist(player.x,player.y,b.x,b.y) < (player.r + b.size*0.5*0.8)){ state.score += 100; bonuses.splice(i,1); continue; }
+      if(b.x < -80) bonuses.splice(i,1);
     }
 
-    scoreEl.textContent = 'Score: ' + state.score;
+    scoreEl.textContent='Score: '+state.score;
   }
 
   function draw(){
     ctx.clearRect(0,0,W,H);
-
-    // pipes
-    ctx.fillStyle = '#1f4fd1';
-    for (const p of pipes){
-      ctx.fillRect(p.x, 0, p.width, p.y);
-      ctx.fillRect(p.x, p.y+p.gap, p.width, H-(p.y+p.gap));
-    }
-
-    // bonuses
-    for (const b of bonuses){
-      ctx.save();
-      ctx.translate(b.x,b.y);
-      ctx.rotate(b.angle);
-      const s=b.size;
-      if (bonusImg.complete) ctx.drawImage(bonusImg,-s/2,-s/2,s,s);
+    ctx.fillStyle='#1f4fd1';
+    for(const p of pipes){ ctx.fillRect(p.x,0,p.width,p.y); ctx.fillRect(p.x,p.y+p.gap,p.width,H-(p.y+p.gap)); }
+    for(const b of bonuses){
+      ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(b.angle);
+      const s=b.size; if(bonusImg.complete) ctx.drawImage(bonusImg,-s/2,-s/2,s,s);
       else { ctx.fillStyle='#ff3b3b'; ctx.beginPath(); ctx.arc(0,0,s/2,0,Math.PI*2); ctx.fill(); }
       ctx.restore();
     }
-
-    // player (draw hanya saat game berjalan)
-    if (state.running && player.sprite && player.sprite.complete){
-      const s = player.r*2.2*1.15;
-      ctx.drawImage(player.sprite, player.x - s/2, player.y - s/2, s, s);
+    if(state.running && player.sprite && player.sprite.complete){
+      const s = player.r*2.2*1.15; ctx.drawImage(player.sprite, player.x-s/2, player.y-s/2, s, s);
     }
   }
 
-  function gameOver(){
-    state.running = false;
-    overlay.style.display = 'flex'; // tampilkan lagi menu di tengah
-  }
+  function gameOver(){ state.running=false; overlay.style.display='flex'; }
 
   // helpers
   function circleRect(cx,cy,cr, rx,ry,rw,rh){
-    const tx = Math.max(rx, Math.min(cx, rx+rw));
-    const ty = Math.max(ry, Math.min(cy, ry+rh));
-    const dx=cx-tx, dy=cy-ty;
-    return dx*dx+dy*dy <= cr*cr;
+    const tx=Math.max(rx,Math.min(cx,rx+rw)), ty=Math.max(ry,Math.min(cy,ry+rh));
+    const dx=cx-tx, dy=cy-ty; return dx*dx+dy*dy <= cr*cr;
   }
   function dist(x1,y1,x2,y2){ const dx=x1-x2, dy=y1-y2; return Math.hypot(dx,dy); }
 })();
