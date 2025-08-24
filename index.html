@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Flappy Lamumu + Bonus 🐮</title>
+  <title>Flappy Lamumu 🐮</title>
   <style>
     :root { --bg:#7a9598; --panel:#ffffff; --accent:#1570ef; --shadow:0 10px 30px rgba(0,0,0,.15); }
     *{box-sizing:border-box} html,body{height:100%}
@@ -18,7 +18,7 @@
     .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:10px 0 14px}
     .slot{border:1.5px solid #e5e7eb;border-radius:16px;padding:14px;text-align:center}
     .slot img{width:80px;height:80px;object-fit:contain;display:block;margin:4px auto 10px}
-    .row{display:flex;gap:10px;justify-content:center;align-items:center;margin-top:8px}
+    .row{display:flex;gap:10px;justify-content:center;align-items:center;margin-top:8px;flex-wrap:wrap}
     button{appearance:none;border:0;border-radius:999px;padding:10px 16px;font-weight:700;cursor:pointer}
     .btn{background:#eef2ff;color:#111827}
     .btn.primary{background:var(--accent);color:white}
@@ -26,7 +26,7 @@
     #lbList{max-height:50vh;overflow:auto;border:1px solid #eee;border-radius:10px;padding:8px}
     #lbList li{display:flex;justify-content:space-between;padding:8px 10px;border-bottom:1px dashed #eee}
     #lbList li span:first-child{opacity:.75}
-    /* floating +100 text */
+    /* +100 floating text */
     .floatTxt{
       position:fixed; color:#16a34a; font-weight:800; pointer-events:none;
       transform:translate(-50%,-50%); text-shadow:0 1px 0 #fff;
@@ -44,21 +44,21 @@
   <canvas id="game"></canvas>
 
   <!-- START MODAL -->
-  <div class="modal" id="startModal">
+  <div class="modal" id="startModal" aria-modal="true" role="dialog">
     <div class="card">
       <h1 class="title">Flappy Lamumu 🐮</h1>
-      <p class="sub">Tap / Click / Space untuk flap • Tekan C untuk ganti karakter cepat</p>
+      <p class="sub">Tap / Click / Space to flap • Press C to switch character quickly</p>
 
-      <input id="playerName" class="name" placeholder="Enter your name" />
+      <input id="playerName" class="name" placeholder="Enter your name" autocomplete="name" />
 
-      <div class="grid" id="charGrid"><!-- 4 pilihan karakter via JS --></div>
+      <div class="grid" id="charGrid"><!-- populated by JS --></div>
 
       <div class="row">
-        <button class="btn" id="leaderboardBtn">Leaderboard</button>
-        <button class="btn primary" id="startBtn">Start</button>
+        <button class="btn" id="leaderboardBtn" type="button">Leaderboard</button>
+        <button class="btn primary" id="startBtn" type="button">Start</button>
       </div>
 
-      <!-- panel leaderboard -->
+      <!-- leaderboard panel -->
       <div id="lbPanel" style="display:none;margin-top:16px">
         <h3 style="margin:8px 0 6px">Top 100 Leaderboard</h3>
         <ol id="lbList"></ol>
@@ -71,9 +71,8 @@
   <audio id="sfxOver" src="assets/cow-moo-390282.mp3"></audio>
 
   <script>
-  // ========= helpers =========
+  // ---------- helpers ----------
   const $ = (s,root=document)=>root.querySelector(s);
-  const onTap = (el, fn) => el && ['click','touchstart'].forEach(ev => el.addEventListener(ev, e => { e.preventDefault(); fn(e); }, {passive:false}));
   function pickSpritePath(n){
     const lower = `assets/lamumu${n}.png`;
     const upper = `assets/Lamumu${n}.png`;
@@ -89,29 +88,27 @@
       t.src=lower;
     });
   }
-  // floating +100 text
   function floatText(x,y,text="+100"){
     const el = document.createElement('div');
-    el.className = 'floatTxt';
-    el.textContent = text;
-    el.style.left = x+'px';
-    el.style.top  = y+'px';
-    document.body.appendChild(el);
-    setTimeout(()=>el.remove(), 800);
+    el.className='floatTxt'; el.textContent=text;
+    el.style.left=x+'px'; el.style.top=y+'px';
+    document.body.appendChild(el); setTimeout(()=>el.remove(),800);
   }
 
-  // ========== UI & State ==========
+  // ---------- Elements ----------
   const cvs = $('#game'), ctx = cvs.getContext('2d');
   const scoreTxt = $('#scoreTxt');
   const startModal = $('#startModal');
   const nameInput = $('#playerName');
   const lbPanel = $('#lbPanel');
   const lbList = $('#lbList');
+  const startBtn = $('#startBtn');
+  const leaderboardBtn = $('#leaderboardBtn');
 
   const bgm = $('#bgm');
   const sfxOver = $('#sfxOver');
 
-  // Responsive canvas DPR
+  // DPR & responsive canvas
   function resizeCanvas(){
     const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
     const w = window.innerWidth, h = window.innerHeight;
@@ -124,6 +121,7 @@
   }
   window.addEventListener('resize', resizeCanvas);
 
+  // ---------- Game state ----------
   let GAME = {
     running:false,
     score:0,
@@ -131,38 +129,38 @@
     bird:{x:120,y:320,vy:0,img:null,size:44},
     pipes:[],
     spriteIndex:1,
-    gravity:0.28,   // jatuh lebih lambat
+    gravity:0.28,   // slower fall
     flapV:-7,
     pipeSpeed:2.3,
-    bonus:{ x:0,y:0,size:44,angle:0,active:false,img:null,nextSpawn:0 } // ikon bonus
+    bonus:{ x:0,y:0,size:48,angle:0,active:false,img:null,nextSpawn:0 }
   };
 
-  // gambar karakter grid
+  // build character choices
   async function renderCharacterGrid(){
     const grid = $('#charGrid'); grid.innerHTML='';
     for(let i=1;i<=4;i++){
       const wrap=document.createElement('div'); wrap.className='slot';
       const img=document.createElement('img'); img.alt=`Lamumu #${i}`; img.src=await pickSpritePath(i);
-      const label=document.createElement('div'); label.textContent=`Lamumu #${i}`;
+      const title=document.createElement('div'); title.textContent=`Lamumu #${i}`;
       const lab=document.createElement('label'); lab.style.display='inline-flex'; lab.style.alignItems='center'; lab.style.gap='6px';
       const rad=document.createElement('input'); rad.type='radio'; rad.name='lamu'; rad.value=i; if(i===1) rad.checked=true;
       const txt=document.createElement('span'); txt.textContent=`Use #${i}`;
-      lab.append(rad,txt); wrap.append(img,label,lab); grid.append(wrap);
+      lab.append(rad,txt); wrap.append(img,title,lab); grid.append(wrap);
     }
   }
 
-  // audio unlock (mobile)
+  // unlock audio only; don't block default behaviors
   const unlockAudio = () => {
     [bgm,sfxOver].forEach(a=>{
       try{ a.muted=false; a.play().then(()=>a.pause()).catch(()=>{}); }catch(e){}
     });
     window.removeEventListener('touchstart', unlockAudio);
-    window.removeEventListener('click', unlockAudio);
+    window.removeEventListener('pointerdown', unlockAudio);
   };
   window.addEventListener('touchstart', unlockAudio, { once:true });
-  window.addEventListener('click', unlockAudio, { once:true });
+  window.addEventListener('pointerdown', unlockAudio, { once:true });
 
-  // ========= Game core =========
+  // assets
   const bonusImg = new Image(); bonusImg.src = "assets/bonus.png";
 
   function resetGame(){
@@ -177,7 +175,6 @@
       const h = 140 + Math.random()*160;
       GAME.pipes.push({x:startX + i*280, h, gap});
     }
-    // siapkan bonus: spawn setelah 1–3 detik
     GAME.bonus.active=false;
     GAME.bonus.nextSpawn = performance.now() + (1000 + Math.random()*2000);
   }
@@ -189,7 +186,6 @@
     const h = 140 + Math.random()*160;
     GAME.pipes.push({x:cvs.width, h, gap});
   }
-
   function spawnBonus(){
     GAME.bonus.size = 48;
     GAME.bonus.x = window.innerWidth + 100 + Math.random()*200;
@@ -205,27 +201,24 @@
     GAME.bird.vy += GAME.gravity;
     GAME.bird.y  += GAME.bird.vy;
 
-    // pipes
+    // pipes movement
     for(const p of GAME.pipes){ p.x -= GAME.pipeSpeed; }
     if(GAME.pipes[0].x < -80) GAME.pipes.shift();
     if(GAME.pipes[GAME.pipes.length-1].x < window.innerWidth - 260) spawnPipe();
 
-    // spawn bonus sesuai waktu
+    // bonus timing & movement
     const now = performance.now();
     if(!GAME.bonus.active && now >= GAME.bonus.nextSpawn) spawnBonus();
-
-    // gerakkan bonus
     if(GAME.bonus.active){
-      GAME.bonus.x -= GAME.pipeSpeed * 1.05; // sedikit lebih cepat dari pipa
+      GAME.bonus.x -= GAME.pipeSpeed * 1.05;
       GAME.bonus.angle = (GAME.bonus.angle + 2) % 360;
-      // keluar layar -> jadwal spawn lagi
       if(GAME.bonus.x + GAME.bonus.size < 0){
         GAME.bonus.active = false;
         GAME.bonus.nextSpawn = now + (1500 + Math.random()*2500);
       }
     }
 
-    // collision dengan pipa
+    // collisions with pipes
     for(const p of GAME.pipes){
       const bx = GAME.bird.x, by = GAME.bird.y, bw=GAME.bird.size, bh=GAME.bird.size*0.8;
       const inPipeX = bx+bw>p.x && bx<p.x+70;
@@ -235,7 +228,7 @@
       if(p.x+70 < bx && !p.passed){ p.passed=true; score(1); }
     }
 
-    // collision dengan bonus (pakai jarak pusat)
+    // collision with bonus (circle distance)
     if(GAME.bonus.active){
       const cx = GAME.bird.x + GAME.bird.size/2;
       const cy = GAME.bird.y + GAME.bird.size/2;
@@ -244,14 +237,14 @@
       const r  = GAME.bird.size*0.45 + GAME.bonus.size*0.5;
       const dx = cx-bx, dy = cy-by;
       if(dx*dx + dy*dy <= r*r){
-        score(100); // +100
+        score(100);
         floatText(bx, by, "+100");
         GAME.bonus.active = false;
         GAME.bonus.nextSpawn = performance.now() + (1500 + Math.random()*2500);
       }
     }
 
-    // ground / ceiling
+    // bounds
     if(GAME.bird.y<0 || GAME.bird.y>window.innerHeight - GAME.bird.size*0.8){ return gameOver(); }
 
     draw();
@@ -259,14 +252,14 @@
   }
 
   function draw(){
-    ctx.clearRect(0,0,cvs.width, cvs.height);
+    ctx.clearRect(0,0,cvs.width,cvs.height);
     // pipes
     ctx.fillStyle='#1d4ed8';
     for(const p of GAME.pipes){
       ctx.fillRect(p.x, 0, 70, p.h - p.gap/2);
       ctx.fillRect(p.x, p.h + p.gap/2, 70, window.innerHeight-(p.h+p.gap/2));
     }
-    // bonus berputar
+    // bonus
     if(GAME.bonus.active && bonusImg.complete){
       const b = GAME.bonus;
       ctx.save();
@@ -279,6 +272,7 @@
     if(GAME.bird.img){
       ctx.drawImage(GAME.bird.img, GAME.bird.x, GAME.bird.y, GAME.bird.size, GAME.bird.size);
     }else{
+      // fallback (small square) if image missing
       ctx.fillStyle='#222'; ctx.fillRect(GAME.bird.x, GAME.bird.y, GAME.bird.size, GAME.bird.size*0.8);
     }
   }
@@ -305,18 +299,18 @@
   async function gameOver(){
     GAME.running = false;
     bgm.pause(); sfxOver.currentTime=0; sfxOver.play().catch(()=>{});
-    // submit skor
+    // submit score
     try{
       await fetch('/api/leaderboard/submit', {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ name: GAME.name || 'anon', score: GAME.score })
       });
     }catch(_){}
-    // kembali ke menu
+    // back to menu
     setTimeout(()=>{ startModal.style.display='grid'; }, 600);
   }
 
-  // ========= Leaderboard =========
+  // ---------- Leaderboard ----------
   async function openLeaderboard(){
     lbPanel.style.display='block';
     lbList.innerHTML = '<li>Loading…</li>';
@@ -339,21 +333,25 @@
     }
   }
 
-  // ========= bind UI =========
+  // ---------- Input binding ----------
   window.addEventListener('DOMContentLoaded', async ()=>{
     resizeCanvas();
     await renderCharacterGrid();
 
-    onTap($('#startBtn'), startGame);
-    onTap($('#leaderboardBtn'), openLeaderboard);
+    startBtn.addEventListener('click', startGame);
+    leaderboardBtn.addEventListener('click', openLeaderboard);
 
-    // TAP/KLIK DIMANA SAJA UNTUK FLAP
-    onTap(document.body, ()=> flap());
-    onTap(cvs, ()=> flap());
+    // Tap / click ANYWHERE to flap **only when modal is hidden**
+    window.addEventListener('pointerdown', (e)=>{
+      // if modal visible or click inside modal card, ignore so inputs & radios work
+      if (startModal.style.display !== 'none') return;
+      if (e.button !== 0) return; // left click / touch only
+      flap();
+    });
 
-    // keyboard
+    // Keyboard
     window.addEventListener('keydown', (e)=>{
-      if(e.code==='Space') { e.preventDefault(); flap(); }
+      if(e.code==='Space'){ e.preventDefault(); flap(); }
       if(e.key.toLowerCase()==='c'){
         if(startModal.style.display!=='none'){
           const current = Number((document.querySelector('input[name="lamu"]:checked')||{value:1}).value);
