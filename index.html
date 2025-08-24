@@ -2,453 +2,379 @@
 <html lang="en">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
-<title>Flappy Lamumu</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+<title>Flappy Lamumu 🐄</title>
 <style>
-  :root {
-    --bg: #6f8f95; /* outer page background */
-    --panel: #ffffff;
-    --text: #0f172a;
-    --accent: #2563eb;
+  :root{
+    --bg:#7fa7af;          /* page background outside game */
+    --card:#ffffff;
+    --shadow:0 10px 30px rgba(0,0,0,.18);
+    --blue:#1949bd;
   }
-  html, body {
-    margin: 0; padding: 0;
-    width: 100%; height: 100%;
-    background: var(--bg);
-    color: var(--text);
-    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
-    overscroll-behavior: none;
-    user-select: none;
-    -webkit-tap-highlight-color: transparent;
+  html,body{height:100%;margin:0;background:var(--bg);font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,sans-serif}
+  /* game area fills screen */
+  #wrap{position:fixed;inset:0;display:grid;place-items:center}
+  canvas{display:block;width:100vw;height:100vh;background:linear-gradient(#bfeeff,#b2e1f7)}
+  /* top score text */
+  #hud{position:fixed;top:8px;left:0;right:0;text-align:center;font-weight:700;font-size:14px;color:#111;user-select:none;pointer-events:none;}
+  /* overlay (start) */
+  .overlay{
+    position:fixed;left:0;right:0;bottom:0;background:var(--card);
+    margin:0 auto 0;max-width:min(680px,94vw);
+    border-radius:16px 16px 0 0;padding:18px 18px 22px;
+    box-shadow:var(--shadow);z-index:20;
   }
-  #gameWrap {
-    position: fixed; inset: 0;
-    display: grid; place-items: center;
+  .title{font-size:22px;font-weight:800;text-align:center;margin:2px 0 8px;}
+  .sub{font-size:14px;color:#555;text-align:center;margin-bottom:10px}
+  .grid{display:grid;gap:14px;grid-template-columns:repeat(4,1fr);margin:12px 0}
+  .card{
+    border:1px solid #e5e7eb;border-radius:12px;padding:10px;text-align:center
   }
-  canvas {
-    width: 100vw; height: 100vh; display: block;
-    background: linear-gradient(#bfefff,#ace4fb);
-    touch-action: none; /* biar tap tidak scroll */
+  .card img{width:72px;height:72px;object-fit:contain;image-rendering:auto}
+  .row{display:flex;gap:8px;align-items:center;justify-content:center;margin-top:6px}
+  .actions{display:flex;gap:10px;justify-content:center;margin-top:12px}
+  button{border:0;border-radius:999px;padding:10px 16px;font-weight:700;cursor:pointer}
+  .primary{background:#2563eb;color:#fff}
+  .ghost{background:#eef2ff;color:#1f2937}
+  input[type="text"]{
+    width:100%;padding:10px 12px;border-radius:10px;border:1px solid #e5e7eb;font-size:14px
   }
-
-  /* score */
-  #hud {
-    position: fixed; top: env(safe-area-inset-top, 8px);
-    left: 0; right: 0;
-    text-align: center; font-weight: 700;
-    z-index: 5; pointer-events: none;
+  .tip{font-size:12px;color:#6b7280;text-align:center;margin-top:8px}
+  @media (min-width:900px){
+    .overlay{border-radius:20px;padding:20px 22px;bottom:auto;top:50%;transform:translateY(-50%)}
   }
-
-  /* modal */
-  .modal {
-    position: fixed; inset: 0;
-    display: grid; place-items: center;
-    background: rgba(15,23,42,.28);
-    z-index: 10;
-  }
-  .card {
-    width: min(900px, 92vw);
-    background: var(--panel);
-    border-radius: 14px;
-    box-shadow: 0 20px 60px rgba(0,0,0,.25);
-    padding: 20px;
-  }
-  .title { font-size: clamp(20px, 2.2vw, 28px); font-weight: 800; text-align:center; margin: 6px 0 2px; }
-  .subtitle { text-align:center; color:#334155; margin-bottom: 16px; }
-
-  .row { display: grid; gap: 16px; }
-  @media (min-width: 700px) { .row.cols-4 { grid-template-columns: repeat(4,1fr); } }
-
-  .char {
-    border: 1px solid #e5e7eb; border-radius: 12px;
-    padding: 12px; display:grid; gap:8px; place-items:center;
-  }
-  .char img { width: 90px; height: 90px; image-rendering: -webkit-optimize-contrast; }
-  .char label { font-size: 14px; }
-  .actions { display:flex; gap:10px; justify-content:center; margin-top: 14px; }
-  button {
-    appearance:none; border:0; border-radius: 999px;
-    padding: 10px 16px; font-weight: 700; cursor: pointer;
-    background: var(--accent); color:white;
-    box-shadow: 0 8px 20px rgba(37,99,235,.35);
-  }
-  button.secondary {
-    background: #e2e8f0; color:#0f172a; box-shadow: none;
-  }
-  input[type="text"] {
-    width: min(520px, 92%); display:block; margin: 0 auto 12px;
-    padding: 10px 12px; font-size: 16px;
-    border: 1px solid #e5e7eb; border-radius: 10px; outline: none;
-  }
-  .muted { color:#64748b; font-size:13px; text-align:center; margin-top:-4px; }
-
-  /* helper hidden */
-  .hidden { display:none !important; }
-
-  /* Safe notch space for iOS */
-  .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
 </style>
 </head>
 <body>
-  <div id="hud">Score: <span id="score">0</span></div>
+<div id="wrap">
+  <canvas id="game"></canvas>
+</div>
+<div id="hud">Score: <span id="scoreText">0</span></div>
 
-  <div id="gameWrap">
-    <canvas id="game"></canvas>
+<!-- START OVERLAY -->
+<div id="startOverlay" class="overlay">
+  <div class="title">Flappy Lamumu 🐄</div>
+  <div class="sub">Tap / Click anywhere to flap · Press <b>C</b> to switch character quickly</div>
+  <input id="playerName" type="text" placeholder="Enter your name" autocomplete="off" />
+  <div class="grid" style="margin-top:12px">
+    <label class="card">
+      <img src="assets/Lamumu1.png" alt="Lamumu #1">
+      <div class="row"><input type="radio" name="skin" value="0" checked> Use #1</div>
+    </label>
+    <label class="card">
+      <img src="assets/Lamumu2.png" alt="Lamumu #2">
+      <div class="row"><input type="radio" name="skin" value="1"> Use #2</div>
+    </label>
+    <label class="card">
+      <img src="assets/Lamumu3.png" alt="Lamumu #3">
+      <div class="row"><input type="radio" name="skin" value="2"> Use #3</div>
+    </label>
+    <label class="card">
+      <img src="assets/Lamumu4.png" alt="Lamumu #4">
+      <div class="row"><input type="radio" name="skin" value="3"> Use #4</div>
+    </label>
   </div>
-
-  <!-- Start Modal -->
-  <div class="modal" id="startModal" aria-modal="true" role="dialog">
-    <div class="card safe-bottom">
-      <div class="title">Flappy Lamumu 🐮</div>
-      <div class="subtitle">Tap / Click anywhere to flap • Press <b>C</b> to switch character quickly</div>
-
-      <input id="playerName" type="text" placeholder="Enter your name" autocomplete="name" />
-
-      <div class="row cols-4" id="charGrid">
-        <div class="char">
-          <img src="/assets/Lamumu1.png" alt="Lamumu #1">
-          <label><input type="radio" name="char" value="0" checked> Use #1</label>
-        </div>
-        <div class="char">
-          <img src="/assets/Lamumu2.png" alt="Lamumu #2">
-          <label><input type="radio" name="char" value="1"> Use #2</label>
-        </div>
-        <div class="char">
-          <img src="/assets/Lamumu3.png" alt="Lamumu #3">
-          <label><input type="radio" name="char" value="2"> Use #3</label>
-        </div>
-        <div class="char">
-          <img src="/assets/Lamumu4.png" alt="Lamumu #4">
-          <label><input type="radio" name="char" value="3"> Use #4</label>
-        </div>
-      </div>
-
-      <div class="actions">
-        <button id="startBtn">Start</button>
-        <button class="secondary" id="howBtn">Leaderboard (coming soon)</button>
-      </div>
-      <div class="muted">Tip: You can change character during play by pressing <b>C</b>.</div>
-    </div>
+  <div class="actions">
+    <button id="startBtn" class="primary">Start</button>
+    <button id="lbBtn" class="ghost" title="Coming soon">Leaderboard (coming soon)</button>
   </div>
+  <div class="tip">Tip: You can change character during play by pressing <b>C</b>.</div>
+</div>
 
-  <!-- Audio -->
-  <audio id="bgm" src="/assets/sweet-country-farm-music-full-354815.mp3" loop preload="auto"></audio>
-  <audio id="sfxOver" src="/assets/cow-moo-390282.mp3" preload="auto"></audio>
+<!-- AUDIO -->
+<audio id="bgm" src="assets/sweet-country-farm-music-full-354815.mp3" loop preload="auto"></audio>
+<audio id="sfxOver" src="assets/cow-moo-390282.mp3" preload="auto"></audio>
 
 <script>
-(() => {
-  // ----------------- CONFIG -----------------
-  const ASSETS = {
-    cows: [
-      "/assets/Lamumu1.png",
-      "/assets/Lamumu2.png",
-      "/assets/Lamumu3.png",
-      "/assets/Lamumu4.png",
-    ],
-    bonus: "/assets/bonus.png",
+(()=>{
+// ==================== CONFIG (speed-only difficulty) ====================
+const CONFIG = {
+  // physics
+  gravity: 0.28,           // slightly lighter fall
+  flapImpulse: -6.2,       // slightly higher flap
+
+  // pipes (fixed gap & spacing)
+  pipeGap: 240,
+  pipeSpacing: 340,
+  pipeWidth: 90,
+
+  // speeds
+  startSpeed: 2.0,
+  maxSpeed:   3.8,
+  difficulty: { stepScore: 50, stepPct: 0.10 },
+  easyPipesCount: 4,
+
+  // bonus coin
+  bonus: {
+    value: 100,
+    spawnEveryMs: [6000, 9000],
+    yClampMin: 0.18,
+    yClampMax: 0.82,
+    size: 36,
+    spinSpeed: 1.8 // rad/s
+  },
+
+  // cow
+  cowSize: 54,           // displayed size in px
+  cowX:   110            // x-position
+};
+
+// ==================== helpers ====================
+const clamp01 = v=>Math.max(0,Math.min(1,v));
+const lerp=(a,b,t)=>a+(b-a)*t;
+function getCurrentSpeed(score, pipesPassed){
+  if(pipesPassed < CONFIG.easyPipesCount) return CONFIG.startSpeed;
+  const steps = Math.floor(score/CONFIG.difficulty.stepScore);
+  const t = clamp01(steps*CONFIG.difficulty.stepPct);
+  return lerp(CONFIG.startSpeed, CONFIG.maxSpeed, t);
+}
+function randRange(a,b){return a + Math.random()*(b-a)}
+
+// ==================== DOM ====================
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const scoreText = document.getElementById('scoreText');
+const startOverlay = document.getElementById('startOverlay');
+const playerNameInput = document.getElementById('playerName');
+const startBtn  = document.getElementById('startBtn');
+const lbBtn     = document.getElementById('lbBtn');
+const bgm = document.getElementById('bgm');
+const sfxOver = document.getElementById('sfxOver');
+
+let W=innerWidth, H=innerHeight;
+function resize(){ W=innerWidth; H=innerHeight; canvas.width=W; canvas.height=H; }
+addEventListener('resize', resize, {passive:true}); resize();
+
+// unlock audio on first user gesture
+const unlock = ()=>{ [bgm,sfxOver].forEach(a=>{ try{a.muted=false; a.play().then(()=>a.pause()).catch(()=>{});}catch{} }); 
+  removeEventListener('pointerdown', unlock); removeEventListener('click', unlock);
+};
+addEventListener('pointerdown', unlock, {once:true}); addEventListener('click', unlock, {once:true});
+
+// ==================== assets ====================
+const cowImgs = [new Image(), new Image(), new Image(), new Image()];
+cowImgs[0].src = 'assets/Lamumu1.png';
+cowImgs[1].src = 'assets/Lamumu2.png';
+cowImgs[2].src = 'assets/Lamumu3.png';
+cowImgs[3].src = 'assets/Lamumu4.png';
+const bonusImg = new Image(); bonusImg.src='assets/bonus.png';
+
+// ==================== game state ====================
+let running=false, gameOver=false;
+let score=0, best=0;
+let pipes=[]; // each: {x, gapY}
+let pipesPassed=0;
+let pipeSpeed = CONFIG.startSpeed;
+
+let cowY = H*0.4, velY = 0, skin=0, name='';
+let nextPipeX = W + 300; // where to spawn next
+let bonus=null; // {x,y,angle}
+let nextBonusAt = 0;
+
+// ==================== input ====================
+addEventListener('pointerdown', ()=>{ if(running && !gameOver) flap(); });
+addEventListener('keydown', e=>{
+  if(e.code==='Space'){ e.preventDefault(); if(running && !gameOver) flap(); }
+  if(e.key==='c' || e.key==='C'){ if(running && !gameOver){ skin=(skin+1)%cowImgs.length; } }
+});
+
+// ==================== start/restart ====================
+startBtn.addEventListener('click', ()=>{
+  name = playerNameInput.value.trim().slice(0,24) || 'Player';
+  const picked = document.querySelector('input[name="skin"]:checked');
+  skin = picked ? parseInt(picked.value,10):0;
+  startOverlay.style.display='none';
+  startGame();
+});
+
+function startGame(){
+  score=0; scoreText.textContent='0';
+  pipes=[]; pipesPassed=0; pipeSpeed=CONFIG.startSpeed;
+  cowY=H*0.4; velY=0; gameOver=false; running=true;
+  nextPipeX = W + 200;
+  scheduleNextBonus();
+  bgm.currentTime=0; bgm.volume=.6; bgm.play().catch(()=>{});
+}
+
+// ==================== core mechanics ====================
+function flap(){ velY = CONFIG.flapImpulse; }
+
+function spawnPipe(){
+  // choose a center Y that keeps the gap entirely on-screen
+  const safeMargin = 60;
+  const minCenter = safeMargin + CONFIG.pipeGap/2;
+  const maxCenter = H - safeMargin - CONFIG.pipeGap/2;
+  const centerY = randRange(minCenter, maxCenter);
+  pipes.push({ x: W + 20, gapY: centerY });
+}
+
+function scheduleNextBonus(){
+  const min = CONFIG.bonus.spawnEveryMs[0];
+  const max = CONFIG.bonus.spawnEveryMs[1];
+  nextBonusAt = performance.now() + randRange(min, max);
+}
+
+function maybeSpawnBonus(t){
+  if(bonus || t < nextBonusAt) return;
+  const minY = H * CONFIG.bonus.yClampMin;
+  const maxY = H * CONFIG.bonus.yClampMax;
+  bonus = {
+    x: W + 80,
+    y: randRange(minY, maxY),
+    angle: 0
   };
+}
 
-  const GAME = {
-    zoom: 1.4,                 // "kamera" lebih dekat (1.0 = default)
-    baseWidth:  70,            // lebar pipa dasar (dikali zoom saat render)
-    baseBird:   42,            // ukuran burung dasar (dikali zoom saat render)
-    gravity:    0.27,          // gravitasi (lebih kecil = jatuh lebih lambat)
-    flapPower:  5.0,           // kekuatan flap
-    speedBase:  2.4,           // kecepatan horizontal awal
-    speedMax:   5.2,           // kecepatan maksimal ketika sulit
-    gapStart:   300,           // celah pipa awal (lebar)
-    gapMin:     160,           // celah minimal saat sulit
-    pipeSpacing: 280,          // jarak antar pipa (px)
-    bonusEvery:  2,            // peluang muncul bonus (1 dari N spawn)
-    bonusMargin: 20,           // margin aman dari tepi gap saat menaruh bonus
-    safeTop:    100,           // batas aman spawn center gap dari atas
-    safeBottom: 120,           // batas aman spawn center gap dari bawah
-  };
+function update(dt){
+  if(!running || gameOver) return;
 
-  // ----------------- STATE -----------------
-  const canvas = document.getElementById('game');
-  const ctx     = canvas.getContext('2d');
-  const scoreEl = document.getElementById('score');
+  // physics
+  velY += CONFIG.gravity;
+  cowY += velY;
 
-  let W = 0, H = 0;
-  const resize = () => {
-    W = canvas.width  = Math.floor(window.innerWidth);
-    H = canvas.height = Math.floor(window.innerHeight);
-  };
-  resize();
-  window.addEventListener('resize', resize);
+  // speed progression
+  pipeSpeed = getCurrentSpeed(score, pipesPassed);
 
-  const images = {
-    cows: [],
-    bonus: null,
-  };
-
-  // Load images
-  const loadImage = src => new Promise(res => { const i=new Image(); i.onload=()=>res(i); i.src=src; });
-  Promise.all(ASSETS.cows.map(loadImage)).then(list => images.cows = list);
-  loadImage(ASSETS.bonus).then(img => images.bonus = img);
-
-  // Audio unlock (mobile autoplay policy)
-  const bgm = document.getElementById('bgm');
-  const sfxOver = document.getElementById('sfxOver');
-  const unlockAudio = () => {
-    [bgm, sfxOver].forEach(a => { try { a.muted=false; a.play().then(()=>a.pause()).catch(()=>{}); } catch(e){} });
-    window.removeEventListener('touchstart', unlockAudio);
-    window.removeEventListener('mousedown', unlockAudio);
-    window.removeEventListener('keydown', unlockAudio);
-  };
-  window.addEventListener('touchstart', unlockAudio, {once:true});
-  window.addEventListener('mousedown', unlockAudio, {once:true});
-  window.addEventListener('keydown', unlockAudio, {once:true});
-
-  // Game vars
-  let running = false;
-  let score = 0;
-  let pipes = [];
-  let bonus = null; // {x,y,r,rot}
-  let speed = GAME.speedBase;
-  let gap = GAME.gapStart;
-  let selectedCow = 0;
-  let playerName = '';
-
-  const bird = {
-    x: 0, y: 0, vy: 0,
-    w: GAME.baseBird, h: GAME.baseBird,
-  };
-
-  const resetGame = () => {
-    score = 0;
-    speed = GAME.speedBase;
-    gap   = GAME.gapStart;
-    pipes = [];
-    bonus = null;
-
-    bird.w = GAME.baseBird * GAME.zoom;
-    bird.h = GAME.baseBird * GAME.zoom;
-    bird.x = Math.max(40, W*0.2);
-    bird.y = H*0.35;
-    bird.vy = 0;
-
-    // spawn beberapa pipa di depan
-    let x = W + 40;
-    for (let i=0; i<4; i++) {
-      pipes.push(spawnPipe(x));
-      x += GAME.pipeSpacing;
+  // spawn pipes by spacing
+  if(pipes.length===0){
+    spawnPipe(); nextPipeX = W + CONFIG.pipeSpacing;
+  }else{
+    // ensure a new pipe appears when last one is far enough
+    if(pipes[pipes.length-1].x < W - CONFIG.pipeSpacing){
+      spawnPipe();
     }
-    scoreEl.textContent = '0';
-  };
-
-  function spawnPipe(x) {
-    // pilih center gap dalam rentang aman
-    const minCenter = GAME.safeTop + gap/2;
-    const maxCenter = H - GAME.safeBottom - gap/2;
-    const centerY = rand(minCenter, maxCenter);
-
-    // peluang bonus
-    let maybeBonus = null;
-    if (Math.random() < 1 / GAME.bonusEvery) {
-      // tempatkan bonus di dalam gap, dengan margin agar tidak terlalu mepet
-      const offsetRange = (gap/2) - GAME.bonusMargin;
-      const bonusOffsetY = rand(-offsetRange, offsetRange);
-      const bonusY = centerY + bonusOffsetY;
-      const bonusR = 18 * GAME.zoom; // radius tampilan
-      maybeBonus = { x: x + GAME.pipeSpacing*0.5, y: bonusY, r: bonusR, rot: 0 };
-    }
-
-    return { x, centerY, gap, bonus: maybeBonus, passed:false };
   }
 
-  // Difficulty grows with score
-  function updateDifficulty() {
-    // naikkan kecepatan sedikit per skor
-    speed = clamp(GAME.speedBase + score * 0.03, GAME.speedBase, GAME.speedMax);
-    // kecilkan gap perlahan
-    gap   = clamp(GAME.gapStart - score * 1.4, GAME.gapMin, GAME.gapStart);
-  }
+  // move pipes & scoring & collision
+  for(let i=pipes.length-1;i>=0;i--){
+    const p = pipes[i];
+    p.x -= pipeSpeed;
 
-  // Utils
-  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
-  const rand  = (a,b) => a + Math.random()*(b-a);
+    // draw handled in render()
 
-  function flap() {
-    bird.vy = -GAME.flapPower; // naik
-  }
-
-  function startGame() {
-    resetGame();
-    running = true;
-    try { bgm.currentTime = 0; bgm.volume = 0.45; bgm.play().catch(()=>{}); } catch(e){}
-  }
-
-  function gameOver() {
-    running = false;
-    try { sfxOver.currentTime = 0; sfxOver.play().catch(()=>{}); } catch(e){}
-    try { bgm.pause(); } catch(e){}
-    // tampilkan modal lagi, simpan skor local
-    document.getElementById('startModal').classList.remove('hidden');
-  }
-
-  // Input: tap/click anywhere or Space to flap; C to switch cow
-  const onTap = e => {
-    e.preventDefault();
-    if (!running) return;
-    flap();
-  };
-  document.addEventListener('pointerdown', onTap, {passive:false});
-  document.addEventListener('keydown', (e) => {
-    if (e.code === 'Space') { e.preventDefault(); if(running) flap(); }
-    if (e.code === 'KeyC') { // quick switch character
-      selectedCow = (selectedCow + 1) % ASSETS.cows.length;
-    }
-  });
-
-  // Start modal events (biar input bisa diketik dengan enak)
-  const startBtn = document.getElementById('startBtn');
-  startBtn.addEventListener('click', () => {
-    playerName = (document.getElementById('playerName').value || '').trim();
-    const radio = document.querySelector('input[name="char"]:checked');
-    selectedCow = radio ? parseInt(radio.value,10) : 0;
-    document.getElementById('startModal').classList.add('hidden');
-    startGame();
-  });
-
-  // ----------------- LOOP -----------------
-  let last = performance.now();
-  function loop(now) {
-    const dt = Math.min(40, now-last); // ms
-    last = now;
-
-    // Clear
-    ctx.clearRect(0,0,W,H);
-
-    // Gameplay
-    if (running) {
-      bird.vy += GAME.gravity;       // gravity
-      bird.y  += bird.vy;
-
-      // Pipes update
-      for (let p of pipes) {
-        p.x -= speed;
-
-        // bonus attach & rotate
-        if (p.bonus) {
-          p.bonus.x -= speed;
-          p.bonus.rot += 0.06; // spin
-        }
-
-        // score: ketika sudah melewati pipa (sekali)
-        if (!p.passed && p.x + GAME.baseWidth*GAME.zoom < bird.x) {
-          p.passed = true;
-          score++;
-          scoreEl.textContent = score;
-          updateDifficulty();
-        }
-      }
-
-      // Recycle front pipe
-      if (pipes.length && pipes[0].x + GAME.baseWidth*GAME.zoom < -10) {
-        const lastX = pipes[pipes.length-1].x;
-        pipes.shift();
-        const np = spawnPipe(lastX + GAME.pipeSpacing);
-        pipes.push(np);
-      }
-
-      // Bonus collision (circle with bird bbox)
-      for (let p of pipes) {
-        if (p.bonus) {
-          const b = p.bonus;
-          if (circleRectIntersect(b.x, b.y, b.r, bird.x, bird.y, bird.w, bird.h)) {
-            // collect
-            score += 100;
-            scoreEl.textContent = score;
-            p.bonus = null;
-            updateDifficulty(); // boleh percepat sedikit juga
-          }
-        }
-      }
-
-      // Collisions with pipes or ground / ceiling
-      if (bird.y < -20 || bird.y + bird.h > H+20) {
-        gameOver();
-      } else {
-        // check each pipe
-        for (let p of pipes) {
-          const pipeW = GAME.baseWidth * GAME.zoom;
-          // rects
-          const topRect = { x:p.x, y:0, w:pipeW, h:p.centerY - p.gap/2 };
-          const botRect = { x:p.x, y:p.centerY + p.gap/2, w:pipeW, h:H - (p.centerY + p.gap/2) };
-          if (rectIntersect(bird.x, bird.y, bird.w, bird.h, topRect.x, topRect.y, topRect.w, topRect.h) ||
-              rectIntersect(bird.x, bird.y, bird.w, bird.h, botRect.x, botRect.y, botRect.w, botRect.h)) {
-            gameOver();
-            break;
-          }
-        }
-      }
+    // passed check (middle of gap)
+    const passX = p.x + CONFIG.pipeWidth/2;
+    if(!p.passed && passX < CONFIG.cowX){
+      p.passed = true;
+      score += 1;
+      scoreText.textContent = String(score);
+      pipesPassed += 1;
     }
 
-    // Draw
-    drawScene();
+    // remove off-screen
+    if(p.x + CONFIG.pipeWidth < -20){
+      pipes.splice(i,1);
+    }
 
-    requestAnimationFrame(loop);
+    // collision check with cow
+    const cx = CONFIG.cowX, cy = cowY, half = CONFIG.cowSize*0.38;
+    const inPipeX = (cx+half) > p.x && (cx-half) < (p.x+CONFIG.pipeWidth);
+    if(inPipeX){
+      const topBottomClear = (cy-half) > (p.gapY - CONFIG.pipeGap/2) &&
+                             (cy+half) < (p.gapY + CONFIG.pipeGap/2);
+      if(!topBottomClear){
+        doGameOver();
+      }
+    }
   }
+
+  // floor / ceiling collision
+  const margin = CONFIG.cowSize*0.5;
+  if(cowY > H - margin || cowY < margin){
+    doGameOver();
+  }
+
+  // bonus spawn & update
+  const now = performance.now();
+  maybeSpawnBonus(now);
+  if(bonus){
+    bonus.x -= pipeSpeed;
+    bonus.angle += CONFIG.bonus.spinSpeed * (dt/1000);
+    // pickup?
+    const dx = (CONFIG.cowX - bonus.x);
+    const dy = (cowY - bonus.y);
+    const dist2 = dx*dx + dy*dy;
+    const r = (CONFIG.cowSize*0.45 + CONFIG.bonus.size*0.5);
+    if(dist2 < r*r){
+      score += CONFIG.bonus.value;
+      scoreText.textContent = String(score);
+      bonus = null;
+      scheduleNextBonus();
+    }else if(bonus.x < -60){
+      bonus = null;
+      scheduleNextBonus();
+    }
+  }
+}
+
+function doGameOver(){
+  if(gameOver) return;
+  gameOver = true; running=false;
+  bgm.pause();
+  try{ sfxOver.currentTime=0; sfxOver.play().catch(()=>{});}catch{}
+  // show start overlay again after short delay
+  setTimeout(()=>{ startOverlay.style.display='block'; }, 500);
+}
+
+// ==================== render ====================
+function render(){
+  // background is already gradient by CSS; we can draw subtle sky tint if needed
+  ctx.clearRect(0,0,W,H);
+
+  // pipes
+  ctx.fillStyle = '#1f4ed8';
+  for(const p of pipes){
+    const x = p.x, w = CONFIG.pipeWidth;
+    const gapH = CONFIG.pipeGap;
+    const topH = p.gapY - gapH/2;
+    const botY = p.gapY + gapH/2;
+    ctx.fillRect(x, 0, w, Math.max(0, topH));
+    ctx.fillRect(x, botY, w, H - botY);
+  }
+
+  // bonus
+  if(bonus){
+    const s = CONFIG.bonus.size;
+    const x = bonus.x, y = bonus.y, a = bonus.angle;
+    if(bonusImg.complete && bonusImg.naturalWidth){
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(a);
+      ctx.drawImage(bonusImg, -s/2, -s/2, s, s);
+      ctx.restore();
+    }else{
+      // fallback: colored rotating disc
+      ctx.save(); ctx.translate(x,y); ctx.rotate(a);
+      ctx.fillStyle='#000'; ctx.beginPath(); ctx.arc(0,0,s*0.5,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  // cow
+  const img = cowImgs[skin];
+  const size = CONFIG.cowSize;
+  if(img.complete && img.naturalWidth){
+    ctx.drawImage(img, CONFIG.cowX - size/2, cowY - size/2, size, size);
+  }else{
+    // fallback box
+    ctx.fillStyle='#222';
+    ctx.fillRect(CONFIG.cowX - size/2, cowY - size/2, size, size);
+  }
+}
+
+// ==================== main loop ====================
+let last = performance.now();
+function loop(now){
+  const dt = now - last; last = now;
+  update(dt);
+  render();
   requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
 
-  function drawScene() {
-    // background gradient already via CSS; here draw pipes, bonus, bird, etc.
-    // Pipes
-    ctx.fillStyle = "#2554cf";
-    for (let p of pipes) {
-      const pipeW = GAME.baseWidth * GAME.zoom;
-      // top
-      const topH = p.centerY - p.gap/2;
-      ctx.fillRect(p.x, 0, pipeW, topH);
-      // bottom
-      const botY = p.centerY + p.gap/2;
-      ctx.fillRect(p.x, botY, pipeW, H - botY);
-
-      // Bonus
-      if (p.bonus && images.bonus) {
-        const b = p.bonus;
-        const s = (b.r*2); // diameter as size
-        ctx.save();
-        ctx.translate(b.x, b.y);
-        ctx.rotate(b.rot);
-        ctx.drawImage(images.bonus, -s/2, -s/2, s, s);
-        ctx.restore();
-      }
-    }
-
-    // Bird
-    const img = images.cows[selectedCow];
-    if (img) {
-      ctx.drawImage(img, bird.x, bird.y, bird.w, bird.h);
-    } else {
-      // fallback square
-      ctx.fillStyle = "#111";
-      ctx.fillRect(bird.x, bird.y, bird.w, bird.h);
-    }
-  }
-
-  // --------------- collisions ---------------
-  function rectIntersect(ax, ay, aw, ah, bx, by, bw, bh) {
-    return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
-  }
-  function circleRectIntersect(cx, cy, cr, rx, ry, rw, rh) {
-    // closest point on rect to circle
-    const nearestX = clamp(cx, rx, rx+rw);
-    const nearestY = clamp(cy, ry, ry+rh);
-    const dx = cx - nearestX;
-    const dy = cy - nearestY;
-    return (dx*dx + dy*dy) <= cr*cr;
-  }
-
-  // --------------- accessibility: focus inputs OK ---------------
-  // agar elemen input di modal bisa di-tap/ketik
-  const startModal = document.getElementById('startModal');
-  startModal.addEventListener('click', (e) => {
-    // click-through disabled intentionally
-  });
-
+// ==================== pointer capture note ====================
+// Keep overlay clickable; when overlay is visible, canvas is still behind it,
+// but overlay sits above it (higher z-index). Inputs are naturally tappable.
 })();
 </script>
 </body>
