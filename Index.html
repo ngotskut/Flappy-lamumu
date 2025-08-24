@@ -1,0 +1,374 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+<title>Flappy Lamumu</title>
+<style>
+  :root { --bg:#b3ecff; --fg:#0b2430; --accent:#ff4d6d; }
+  html,body{height:100%;margin:0;background:var(--bg);font-family:system-ui,Arial;}
+  .wrap{display:grid;place-items:center;height:100%}
+  #ui{position:fixed;inset:0;pointer-events:none}
+  .hud{position:absolute;left:50%;transform:translateX(-50%);top:.75rem;color:var(--fg);
+       font-weight:800;font-size:1.25rem;text-shadow:0 2px 0 #fff7}
+  .controls{position:absolute;bottom:.5rem;left:50%;transform:translateX(-50%);
+    display:flex;gap:.5rem;pointer-events:auto;flex-wrap:wrap;justify-content:center}
+  button{border:0;border-radius:999px;padding:.6rem .9rem;font-weight:700;background:var(--fg);color:#fff;cursor:pointer}
+  button.secondary{background:#fff;color:var(--fg);border:2px solid var(--fg)}
+  button:disabled{opacity:.5;cursor:not-allowed}
+  input[type="text"]{padding:.55rem .75rem;border-radius:999px;border:2px solid var(--fg);
+    outline:0;font-weight:700;min-width:220px}
+  #overlay{position:absolute;inset:0;display:grid;place-items:center;background:#0007;color:#fff;
+    font-weight:800;letter-spacing:.5px;text-align:center;padding:1rem}
+  #overlay.hidden{display:none}
+  canvas{background:linear-gradient(#b3ecff,#d8f7ff);border-radius:18px;box-shadow:0 8px 24px #0002}
+
+  /* Panel */
+  .panel{background:#fff;color:var(--fg);border-radius:16px;padding:1rem;max-width:820px;width:min(92vw,820px)}
+  .title{font-size:1.8rem;margin-bottom:.4rem;text-align:center}
+  .hint{opacity:.8;font-size:.95rem;text-align:center}
+  .row{display:flex;gap:.6rem;align-items:center;justify-content:center;margin:.75rem 0}
+  .grid{display:grid;grid-template-columns:repeat(4,minmax(110px,1fr));gap:.75rem;margin:1rem 0}
+  .card{background:#f7fbff;border-radius:14px;padding:.7rem;display:flex;flex-direction:column;gap:.5rem;align-items:center}
+  .thumb{width:100px;height:100px;border-radius:12px;background:#fff;display:grid;place-items:center;overflow:hidden}
+  .thumb img{max-width:100%;max-height:100%}
+  .choose{display:flex;gap:.5rem;align-items:center;justify-content:center}
+
+  /* Leaderboard */
+  .lb{margin-top:1rem}
+  table{width:100%;border-collapse:collapse;font-weight:700}
+  th,td{padding:.5rem;border-bottom:1px solid #e9eef5;text-align:left}
+  th{font-size:.9rem;color:#355}
+  td small{opacity:.6;font-weight:600}
+  .lb-actions{display:flex;gap:.5rem;justify-content:center;margin-top:.5rem}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <canvas id="game" width="360" height="640" aria-label="Flappy Lamumu game"></canvas>
+
+  <!-- audio -->
+  <audio id="bgm" src="assets/sweet-country-farm-music-full-354815.mp3" loop></audio>
+  <audio id="moo" src="assets/cow-moo-390282.mp3"></audio>
+
+  <div id="ui" aria-hidden="true">
+    <div class="hud">Score: <span id="score">0</span></div>
+
+    <!-- overlay: menu / game over / leaderboard -->
+    <div id="overlay">
+      <div class="panel" id="menuPanel">
+        <div class="title">Flappy Lamumu 🐮</div>
+        <div class="hint">Tap / Click / Space to flap • Press C to switch character quickly</div>
+
+        <!-- name input -->
+        <div class="row">
+          <input id="playerName" type="text" maxlength="16" placeholder="Enter your name" />
+        </div>
+
+        <!-- character select -->
+        <div class="grid" role="listbox" aria-label="Choose character">
+          <label class="card">
+            <div class="thumb"><img id="thumb0" src="assets/lamumu1.png" alt="Lamumu #1" loading="eager"></div>
+            <div class="choose"><input type="radio" name="char" value="0" checked> Use #1</div>
+          </label>
+          <label class="card">
+            <div class="thumb"><img id="thumb1" src="assets/lamumu2.png" alt="Lamumu #2" loading="eager"></div>
+            <div class="choose"><input type="radio" name="char" value="1"> Use #2</div>
+          </label>
+          <label class="card">
+            <div class="thumb"><img id="thumb2" src="assets/lamumu3.png" alt="Lamumu #3"></div>
+            <div class="choose"><input type="radio" name="char" value="2"> Use #3</div>
+          </label>
+          <label class="card">
+            <div class="thumb"><img id="thumb3" src="assets/lamumu4.png" alt="Lamumu #4"></div>
+            <div class="choose"><input type="radio" name="char" value="3"> Use #4</div>
+          </label>
+        </div>
+
+        <div class="row">
+          <button id="start" disabled>Start</button>
+          <button id="showLB" class="secondary">Leaderboard</button>
+        </div>
+
+        <div class="lb" id="menuLB" style="display:none">
+          <div class="title" style="font-size:1.35rem;margin:0 0 .25rem">Leaderboard (Top 100)</div>
+          <div id="lbTableContainer"></div>
+          <div class="lb-actions">
+            <button id="hideLB" class="secondary">Close</button>
+            <button id="resetLocalLB" class="secondary">Reset Local Cache</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="btnFlap" class="secondary" aria-label="Flap">Flap</button>
+      <button id="btnRestart" style="display:none">Restart</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const cvs = document.getElementById('game');
+  const ctx = cvs.getContext('2d');
+  const scoreEl = document.getElementById('score');
+  const overlay = document.getElementById('overlay');
+  const startBtn = document.getElementById('start');
+  const restartBtn = document.getElementById('btnRestart');
+  const flapBtn = document.getElementById('btnFlap');
+  const nameInput = document.getElementById('playerName');
+  const showLBBtn = document.getElementById('showLB');
+  const hideLBBtn = document.getElementById('hideLB');
+  const resetLocalLBBtn = document.getElementById('resetLocalLB');
+  const menuLB = document.getElementById('menuLB');
+  const lbTableContainer = document.getElementById('lbTableContainer');
+
+  // canvas scaling
+  const DPR = Math.min(2, window.devicePixelRatio || 1);
+  function resizeCanvas() {
+    const maxH = Math.min(700, window.innerHeight - 32);
+    const aspect = 360/640;
+    const h = Math.max(480, Math.min(maxH, window.innerHeight * .9));
+    const w = h*aspect;
+    cvs.style.width = w + 'px';
+    cvs.style.height = h + 'px';
+    cvs.width = Math.floor(w*DPR);
+    cvs.height = Math.floor(h*DPR);
+  }
+  resizeCanvas(); window.addEventListener('resize', resizeCanvas);
+
+  // Built-in character sprites
+  const spritePaths = [
+    'assets/lamumu1.png',
+    'assets/lamumu2.png',
+    'assets/lamumu3.png',
+    'assets/lamumu4.png',
+  ];
+  const radios = [...document.querySelectorAll('input[name="char"]')];
+  let selectedIdx = 0;
+  radios.forEach(r => r.addEventListener('change', updateStartState));
+
+  const lamumuImgs = [null,null,null,null];
+  spritePaths.forEach((src,i)=>{
+    const img = new Image(); img.src = src; img.onload = ()=>{ lamumuImgs[i]=img; updateStartState(); };
+  });
+
+  // global leaderboard helpers (fetch)
+  async function submitGlobalScore(name, score) {
+    try {
+      const res = await fetch("/api/leaderboard/submit", {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ name, score })
+      });
+      return await res.json();
+    } catch {
+      return { ok:false };
+    }
+  }
+  async function fetchTop100() {
+    try {
+      const res = await fetch("/api/leaderboard/top");
+      const data = await res.json();
+      return Array.isArray(data?.entries) ? data.entries : [];
+    } catch {
+      return [];
+    }
+  }
+  function renderTop100Table(containerEl, entries) {
+    if (!entries.length) {
+      containerEl.innerHTML = '<div class="hint">No scores yet. Be the first!</div>';
+      return;
+    }
+    const rows = entries.map(e => `
+      <tr>
+        <td>${e.rank}</td>
+        <td>${String(e.name).replace(/[<>&]/g,'')}</td>
+        <td>${e.score}</td>
+      </tr>`).join('');
+    containerEl.innerHTML = `
+      <table>
+        <thead><tr><th>#</th><th>Name</th><th>Score</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  // state
+  let playing = false, over = false, t=0, score=0;
+  let player, pipes = [], lastPipeT=0, playerName = '';
+
+  function sanitizeName(s){
+    s = (s||'').trim().slice(0,16);
+    return s.replace(/[^a-zA-Z0-9 _.-]/g,'') || '';
+  }
+
+  function updateStartState(){
+    const checked = document.querySelector('input[name="char"]:checked');
+    selectedIdx = checked ? +checked.value : 0;
+    const hasSprite = !!lamumuImgs[selectedIdx];
+    const validName = !!sanitizeName(nameInput.value);
+    startBtn.disabled = !(checked && hasSprite && validName);
+  }
+  nameInput.addEventListener('input', updateStartState);
+
+  function reset() {
+    player = { x:cvs.width*0.28, y:cvs.height*0.5, vy:0, r:22*DPR, s:1.0 };
+    pipes = []; lastPipeT = 0; score = 0; t = 0; over = false;
+    scoreEl.textContent = '0';
+  }
+
+  function flap() { if (!playing || over) return; player.vy = -5.2*DPR; }
+
+  function spawnPipe() {
+    const gap = 150*DPR;
+    const pad = 60*DPR;
+    const minY = pad, maxY = cvs.height - pad - gap;
+    const topY = minY + Math.random()*(maxY-minY);
+    const w = 58*DPR;
+    pipes.push({ x:cvs.width + w, w, top: topY, gap, passed:false, spd: 2.2*DPR });
+  }
+
+  function update(dt) {
+    t += dt;
+    player.vy += 12.5*DPR * dt;
+    player.y += player.vy;
+
+    if (t - lastPipeT > 1.25) { spawnPipe(); lastPipeT = t; }
+    pipes.forEach(p => p.x -= p.spd);
+    pipes = pipes.filter(p => p.x + p.w > -2);
+
+    for (const p of pipes) {
+      if (!p.passed && p.x + p.w < player.x) { score++; scoreEl.textContent = score; p.passed = true; }
+      const inX = player.x + player.r > p.x && player.x - player.r < p.x + p.w;
+      const hitTop = player.y - player.r < p.top;
+      const hitBot = player.y + player.r > p.top + p.gap;
+      if (inX && (hitTop || hitBot)) { gameOver(); }
+    }
+    if (player.y - player.r < 0 || player.y + player.r > cvs.height) gameOver();
+  }
+
+  function render() {
+    // sky
+    ctx.fillStyle = ctx.createLinearGradient(0,0,0,cvs.height);
+    ctx.fillRect(0,0,cvs.width,cvs.height);
+
+    // ground
+    ctx.fillStyle = '#a6d8ff';
+    ctx.fillRect(0, cvs.height-40*DPR, cvs.width, 40*DPR);
+
+    // pipes
+    pipes.forEach(p => {
+      ctx.fillStyle = '#3cb371';
+      ctx.fillRect(p.x, 0, p.w, p.top);
+      const by = p.top + p.gap;
+      ctx.fillRect(p.x, by, p.w, cvs.height - by);
+      ctx.fillStyle = '#2e8b57';
+      ctx.fillRect(p.x-2, p.top-8, p.w+4, 10);
+      ctx.fillRect(p.x-2, by-2, p.w+4, 10);
+    });
+
+    // player sprite
+    const img = lamumuImgs[selectedIdx];
+    if (img) {
+      const s = 0.7*DPR*player.s;
+      const w = img.width*s, h = img.height*s;
+      ctx.save(); ctx.translate(player.x, player.y);
+      ctx.drawImage(img, -w/2, -h/2, w, h);
+      ctx.restore();
+    } else {
+      ctx.save();
+      ctx.translate(player.x, player.y);
+      ctx.fillStyle="#fff"; ctx.beginPath(); ctx.arc(0,0,22*DPR,0,7); ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function loop(ts){
+    if(!loop.last) loop.last = ts;
+    const dt = Math.min(0.04, (ts - loop.last)/1000); loop.last = ts;
+    if (playing && !over) update(dt);
+    render();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  async function gameOver(){
+    over = true; playing = false;
+
+    // stop bgm & play moo
+    const bgm = document.getElementById('bgm');
+    bgm.pause(); bgm.currentTime = 0;
+    const moo = document.getElementById('moo'); moo.volume = 0.8; try{ moo.play(); }catch{}
+
+    // submit to global leaderboard
+    if (playerName && score >= 0) {
+      await submitGlobalScore(playerName, score);
+    }
+
+    // show overlay + load Top 100
+    overlay.classList.remove('hidden');
+    document.getElementById('menuPanel').querySelector('.title').textContent = 'Game Over 💥';
+    const hintEl = document.getElementById('menuPanel').querySelector('.hint');
+    if (hintEl) hintEl.textContent = `Score: ${score}`;
+    restartBtn.style.display = 'inline-block';
+
+    const list = await fetchTop100();
+    renderTop100Table(lbTableContainer, list);
+    menuLB.style.display = 'block';
+  }
+
+  // UI events
+  const bgmEl = document.getElementById('bgm');
+
+  startBtn.onclick = async () => {
+    if (startBtn.disabled) return;
+
+    const checked = document.querySelector('input[name="char"]:checked');
+    selectedIdx = checked ? +checked.value : 0;
+
+    playerName = sanitizeName(nameInput.value);
+    if (!playerName) return;
+
+    // reset menu header
+    document.getElementById('menuPanel').querySelector('.title').textContent = 'Flappy Lamumu 🐮';
+    const hintEl = document.getElementById('menuPanel').querySelector('.hint');
+    if (hintEl) hintEl.textContent = 'Tap / Click / Space to flap • Press C to switch character quickly';
+    menuLB.style.display = 'none';
+
+    reset(); playing = true; overlay.classList.add('hidden'); restartBtn.style.display='inline-block';
+    try { bgmEl.volume = 0.4; await bgmEl.play(); } catch(e) {}
+  };
+
+  restartBtn.onclick = async () => {
+    reset(); playing = true; overlay.classList.add('hidden');
+    try { bgmEl.currentTime = 0; bgmEl.volume = 0.4; await bgmEl.play(); } catch(e) {}
+  };
+
+  flapBtn.onclick = flap;
+  window.addEventListener('keydown', e => {
+    if (e.code === 'Space') flap();
+    if (e.code === 'KeyC') {
+      selectedIdx = (selectedIdx + 1) % 4;
+      const r = document.querySelectorAll('input[name="char"]')[selectedIdx];
+      r && (r.checked = true);
+      updateStartState();
+    }
+  });
+  cvs.addEventListener('pointerdown', flap, {passive:true});
+
+  // Leaderboard buttons
+  showLBBtn.onclick = async () => {
+    const list = await fetchTop100();
+    renderTop100Table(lbTableContainer, list);
+    menuLB.style.display='block';
+  };
+  hideLBBtn.onclick = () => { menuLB.style.display='none'; };
+  resetLocalLBBtn.onclick = () => { lbTableContainer.innerHTML = '<div class="hint">Cleared local cache.</div>'; };
+
+  // init
+  updateStartState();
+})();
+</script>
+</body>
+  </html>
