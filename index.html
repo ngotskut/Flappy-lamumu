@@ -3,14 +3,14 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Flappy Lamumu 🐮</title>
+  <title>Flappy Lamumu + Bonus 🐮</title>
   <style>
-    :root { --bg:#7a9598; --panel:#ffffff; --muted:#8aa0a3; --accent:#1570ef; --shadow:0 10px 30px rgba(0,0,0,.15); }
+    :root { --bg:#7a9598; --panel:#ffffff; --accent:#1570ef; --shadow:0 10px 30px rgba(0,0,0,.15); }
     *{box-sizing:border-box} html,body{height:100%}
-    body{margin:0;background:var(--bg);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial}
-    #hud{position:fixed;top:8px;left:0;right:0;text-align:center;color:#000;font-weight:700}
-    canvas{display:block;margin:0 auto;background:linear-gradient(#9fe8ff,#bfefff) no-repeat center/cover;box-shadow:var(--shadow);border-radius:18px}
-    .modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:grid;place-items:center}
+    body{margin:0;background:var(--bg);font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial;overflow:hidden}
+    #hud{position:fixed;top:8px;left:0;right:0;text-align:center;color:#000;font-weight:800;z-index:5;text-shadow:0 1px 0 #fff}
+    canvas{position:fixed;inset:0;display:block;background:linear-gradient(#9fe8ff,#bfefff)}
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.35);display:grid;place-items:center;z-index:10}
     .card{width:min(720px,96vw);background:var(--panel);padding:24px;border-radius:20px;box-shadow:var(--shadow)}
     .title{font-weight:800;font-size:clamp(20px,2.8vw,28px);text-align:center;margin:0 0 8px}
     .sub{color:#4b5563;text-align:center;margin:0 0 20px}
@@ -22,29 +22,36 @@
     button{appearance:none;border:0;border-radius:999px;padding:10px 16px;font-weight:700;cursor:pointer}
     .btn{background:#eef2ff;color:#111827}
     .btn.primary{background:var(--accent);color:white}
-    #flapBtn{position:fixed;left:50%;transform:translateX(-50%);bottom:12px}
     /* leaderboard */
     #lbList{max-height:50vh;overflow:auto;border:1px solid #eee;border-radius:10px;padding:8px}
     #lbList li{display:flex;justify-content:space-between;padding:8px 10px;border-bottom:1px dashed #eee}
     #lbList li span:first-child{opacity:.75}
+    /* floating +100 text */
+    .floatTxt{
+      position:fixed; color:#16a34a; font-weight:800; pointer-events:none;
+      transform:translate(-50%,-50%); text-shadow:0 1px 0 #fff;
+      animation:pop 800ms ease-out forwards;
+    }
+    @keyframes pop{
+      from{opacity:1; transform:translate(-50%,-50%) scale(1)}
+      to{opacity:0; transform:translate(-50%,-140%) scale(1.2)}
+    }
   </style>
 </head>
 <body>
 
   <div id="hud">Score: <span id="scoreTxt">0</span></div>
-  <canvas id="game" width="420" height="720"></canvas>
+  <canvas id="game"></canvas>
 
   <!-- START MODAL -->
   <div class="modal" id="startModal">
     <div class="card">
       <h1 class="title">Flappy Lamumu 🐮</h1>
-      <p class="sub">Tap / Click / Space to flap • Press C to switch character quickly</p>
+      <p class="sub">Tap / Click / Space untuk flap • Tekan C untuk ganti karakter cepat</p>
 
       <input id="playerName" class="name" placeholder="Enter your name" />
 
-      <div class="grid" id="charGrid">
-        <!-- 4 pilihan karakter akan diisi oleh JS -->
-      </div>
+      <div class="grid" id="charGrid"><!-- 4 pilihan karakter via JS --></div>
 
       <div class="row">
         <button class="btn" id="leaderboardBtn">Leaderboard</button>
@@ -59,9 +66,7 @@
     </div>
   </div>
 
-  <button id="flapBtn" class="btn">Flap</button>
-
-  <!-- AUDIO (pastikan file ada di /assets) -->
+  <!-- AUDIO -->
   <audio id="bgm" src="assets/sweet-country-farm-music-full-354815.mp3" loop></audio>
   <audio id="sfxOver" src="assets/cow-moo-390282.mp3"></audio>
 
@@ -69,22 +74,30 @@
   // ========= helpers =========
   const $ = (s,root=document)=>root.querySelector(s);
   const onTap = (el, fn) => el && ['click','touchstart'].forEach(ev => el.addEventListener(ev, e => { e.preventDefault(); fn(e); }, {passive:false}));
-
-  // coba muat path yang tersedia (lowercase/Uppercase)
   function pickSpritePath(n){
     const lower = `assets/lamumu${n}.png`;
     const upper = `assets/Lamumu${n}.png`;
     return new Promise(resolve=>{
-      const test = new Image();
-      test.onload = ()=> resolve(lower);
-      test.onerror = ()=>{
-        const t2 = new Image();
-        t2.onload = ()=> resolve(upper);
-        t2.onerror = ()=> resolve(lower); // fallback
-        t2.src = upper;
+      const t = new Image();
+      t.onload = ()=>resolve(lower);
+      t.onerror = ()=>{
+        const t2=new Image();
+        t2.onload=()=>resolve(upper);
+        t2.onerror=()=>resolve(lower);
+        t2.src=upper;
       };
-      test.src = lower;
+      t.src=lower;
     });
+  }
+  // floating +100 text
+  function floatText(x,y,text="+100"){
+    const el = document.createElement('div');
+    el.className = 'floatTxt';
+    el.textContent = text;
+    el.style.left = x+'px';
+    el.style.top  = y+'px';
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(), 800);
   }
 
   // ========== UI & State ==========
@@ -94,34 +107,54 @@
   const nameInput = $('#playerName');
   const lbPanel = $('#lbPanel');
   const lbList = $('#lbList');
-  const flapBtn = $('#flapBtn');
 
   const bgm = $('#bgm');
   const sfxOver = $('#sfxOver');
 
-  let GAME = { running:false, score:0, name:'', bird:{x:120,y:320,vy:0,img:null}, pipes:[], spriteIndex:1, gravity:0.45, flapV:-7 };
+  // Responsive canvas DPR
+  function resizeCanvas(){
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    const w = window.innerWidth, h = window.innerHeight;
+    cvs.style.width = w + 'px';
+    cvs.style.height = h + 'px';
+    cvs.width  = Math.floor(w * dpr);
+    cvs.height = Math.floor(h * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    if(!GAME.running) draw();
+  }
+  window.addEventListener('resize', resizeCanvas);
 
-  // buat kartu karakter
+  let GAME = {
+    running:false,
+    score:0,
+    name:'',
+    bird:{x:120,y:320,vy:0,img:null,size:44},
+    pipes:[],
+    spriteIndex:1,
+    gravity:0.28,   // jatuh lebih lambat
+    flapV:-7,
+    pipeSpeed:2.3,
+    bonus:{ x:0,y:0,size:44,angle:0,active:false,img:null,nextSpawn:0 } // ikon bonus
+  };
+
+  // gambar karakter grid
   async function renderCharacterGrid(){
-    const grid = $('#charGrid');
-    grid.innerHTML = '';
+    const grid = $('#charGrid'); grid.innerHTML='';
     for(let i=1;i<=4;i++){
-      const wrap = document.createElement('div'); wrap.className='slot';
-      const img = document.createElement('img'); img.alt=`Lamumu #${i}`; img.src = await pickSpritePath(i);
-      const label = document.createElement('div'); label.textContent = `Lamumu #${i}`;
-      const radWrap = document.createElement('label'); radWrap.style.display='inline-flex'; radWrap.style.alignItems='center'; radWrap.style.gap='6px';
-      const rad = document.createElement('input'); rad.type='radio'; rad.name='lamu'; rad.value=i; if(i===1) rad.checked=true;
-      const txt = document.createElement('span'); txt.textContent=`Use #${i}`;
-      radWrap.append(rad, txt);
-      wrap.append(img,label,radWrap);
-      grid.append(wrap);
+      const wrap=document.createElement('div'); wrap.className='slot';
+      const img=document.createElement('img'); img.alt=`Lamumu #${i}`; img.src=await pickSpritePath(i);
+      const label=document.createElement('div'); label.textContent=`Lamumu #${i}`;
+      const lab=document.createElement('label'); lab.style.display='inline-flex'; lab.style.alignItems='center'; lab.style.gap='6px';
+      const rad=document.createElement('input'); rad.type='radio'; rad.name='lamu'; rad.value=i; if(i===1) rad.checked=true;
+      const txt=document.createElement('span'); txt.textContent=`Use #${i}`;
+      lab.append(rad,txt); wrap.append(img,label,lab); grid.append(wrap);
     }
   }
 
   // audio unlock (mobile)
   const unlockAudio = () => {
     [bgm,sfxOver].forEach(a=>{
-      try { a.muted=false; a.play().then(()=>a.pause()).catch(()=>{}); } catch(e){}
+      try{ a.muted=false; a.play().then(()=>a.pause()).catch(()=>{}); }catch(e){}
     });
     window.removeEventListener('touchstart', unlockAudio);
     window.removeEventListener('click', unlockAudio);
@@ -129,83 +162,141 @@
   window.addEventListener('touchstart', unlockAudio, { once:true });
   window.addEventListener('click', unlockAudio, { once:true });
 
-  // ========= Game core (simple flappy) =========
+  // ========= Game core =========
+  const bonusImg = new Image(); bonusImg.src = "assets/bonus.png";
+
   function resetGame(){
     GAME.score = 0; scoreTxt.textContent = 0;
-    GAME.bird.y = cvs.height/2; GAME.bird.vy = 0;
-    GAME.pipes = [{x:480,h:200,gap:150},{x:760,h:220,gap:150},{x:1040,h:180,gap:150}];
+    GAME.bird.x = Math.max(80, Math.min(160, window.innerWidth * 0.25));
+    GAME.bird.y = window.innerHeight/2;
+    GAME.bird.vy = 0;
+    GAME.pipes = [];
+    const startX = window.innerWidth + 120;
+    const gap = Math.max(140, Math.min(200, window.innerHeight * 0.22));
+    for(let i=0;i<3;i++){
+      const h = 140 + Math.random()*160;
+      GAME.pipes.push({x:startX + i*280, h, gap});
+    }
+    // siapkan bonus: spawn setelah 1–3 detik
+    GAME.bonus.active=false;
+    GAME.bonus.nextSpawn = performance.now() + (1000 + Math.random()*2000);
   }
 
   function flap(){ if(!GAME.running) return; GAME.bird.vy = GAME.flapV; }
+
   function spawnPipe(){
+    const gap = Math.max(140, Math.min(200, window.innerHeight * 0.22));
     const h = 140 + Math.random()*160;
-    GAME.pipes.push({x:cvs.width+120,h, gap:150});
+    GAME.pipes.push({x:cvs.width, h, gap});
+  }
+
+  function spawnBonus(){
+    GAME.bonus.size = 48;
+    GAME.bonus.x = window.innerWidth + 100 + Math.random()*200;
+    GAME.bonus.y = Math.random() * (window.innerHeight - 140) + 70;
+    GAME.bonus.angle = 0;
+    GAME.bonus.active = true;
   }
 
   function update(){
     if(!GAME.running) return;
+
     // physics
     GAME.bird.vy += GAME.gravity;
-    GAME.bird.y += GAME.bird.vy;
+    GAME.bird.y  += GAME.bird.vy;
 
     // pipes
-    for(const p of GAME.pipes){ p.x -= 2.4; }
+    for(const p of GAME.pipes){ p.x -= GAME.pipeSpeed; }
     if(GAME.pipes[0].x < -80) GAME.pipes.shift();
-    if(GAME.pipes[GAME.pipes.length-1].x < cvs.width-260) spawnPipe();
+    if(GAME.pipes[GAME.pipes.length-1].x < window.innerWidth - 260) spawnPipe();
 
-    // collision & score
+    // spawn bonus sesuai waktu
+    const now = performance.now();
+    if(!GAME.bonus.active && now >= GAME.bonus.nextSpawn) spawnBonus();
+
+    // gerakkan bonus
+    if(GAME.bonus.active){
+      GAME.bonus.x -= GAME.pipeSpeed * 1.05; // sedikit lebih cepat dari pipa
+      GAME.bonus.angle = (GAME.bonus.angle + 2) % 360;
+      // keluar layar -> jadwal spawn lagi
+      if(GAME.bonus.x + GAME.bonus.size < 0){
+        GAME.bonus.active = false;
+        GAME.bonus.nextSpawn = now + (1500 + Math.random()*2500);
+      }
+    }
+
+    // collision dengan pipa
     for(const p of GAME.pipes){
-      const topBot = p.h, gap = p.gap;
-      // rectangle checks
-      const bx = GAME.bird.x, by = GAME.bird.y, bw=40,bh=32;
+      const bx = GAME.bird.x, by = GAME.bird.y, bw=GAME.bird.size, bh=GAME.bird.size*0.8;
       const inPipeX = bx+bw>p.x && bx<p.x+70;
-      const hitTop = by < topBot- gap/2;
-      const hitBot = by+bh > topBot + gap/2;
+      const hitTop = by <  p.h - p.gap/2;
+      const hitBot = by+bh > p.h + p.gap/2;
       if(inPipeX && (hitTop || hitBot)){ return gameOver(); }
       if(p.x+70 < bx && !p.passed){ p.passed=true; score(1); }
     }
 
+    // collision dengan bonus (pakai jarak pusat)
+    if(GAME.bonus.active){
+      const cx = GAME.bird.x + GAME.bird.size/2;
+      const cy = GAME.bird.y + GAME.bird.size/2;
+      const bx = GAME.bonus.x + GAME.bonus.size/2;
+      const by = GAME.bonus.y + GAME.bonus.size/2;
+      const r  = GAME.bird.size*0.45 + GAME.bonus.size*0.5;
+      const dx = cx-bx, dy = cy-by;
+      if(dx*dx + dy*dy <= r*r){
+        score(100); // +100
+        floatText(bx, by, "+100");
+        GAME.bonus.active = false;
+        GAME.bonus.nextSpawn = performance.now() + (1500 + Math.random()*2500);
+      }
+    }
+
     // ground / ceiling
-    if(GAME.bird.y<0 || GAME.bird.y>cvs.height-40){ return gameOver(); }
+    if(GAME.bird.y<0 || GAME.bird.y>window.innerHeight - GAME.bird.size*0.8){ return gameOver(); }
 
     draw();
     requestAnimationFrame(update);
   }
 
   function draw(){
-    ctx.clearRect(0,0,cvs.width,cvs.height);
+    ctx.clearRect(0,0,cvs.width, cvs.height);
     // pipes
     ctx.fillStyle='#1d4ed8';
     for(const p of GAME.pipes){
-      // top
       ctx.fillRect(p.x, 0, 70, p.h - p.gap/2);
-      // bottom
-      ctx.fillRect(p.x, p.h + p.gap/2, 70, cvs.height-(p.h+p.gap/2));
+      ctx.fillRect(p.x, p.h + p.gap/2, 70, window.innerHeight-(p.h+p.gap/2));
+    }
+    // bonus berputar
+    if(GAME.bonus.active && bonusImg.complete){
+      const b = GAME.bonus;
+      ctx.save();
+      ctx.translate(b.x + b.size/2, b.y + b.size/2);
+      ctx.rotate(b.angle * Math.PI/180);
+      ctx.drawImage(bonusImg, -b.size/2, -b.size/2, b.size, b.size);
+      ctx.restore();
     }
     // bird
     if(GAME.bird.img){
-      ctx.drawImage(GAME.bird.img, GAME.bird.x, GAME.bird.y, 40, 40);
+      ctx.drawImage(GAME.bird.img, GAME.bird.x, GAME.bird.y, GAME.bird.size, GAME.bird.size);
     }else{
-      ctx.fillStyle='#222'; ctx.fillRect(GAME.bird.x, GAME.bird.y, 40, 32);
+      ctx.fillStyle='#222'; ctx.fillRect(GAME.bird.x, GAME.bird.y, GAME.bird.size, GAME.bird.size*0.8);
     }
   }
 
   function score(n){ GAME.score+=n; scoreTxt.textContent = GAME.score; }
 
   async function startGame(){
-    // ambil nama & karakter
     const name = nameInput.value.trim();
     if(!name){ alert('Please enter your name'); return; }
     const cho = document.querySelector('input[name="lamu"]:checked'); 
     const idx = cho ? Number(cho.value) : 1;
     GAME.name = name; GAME.spriteIndex = idx;
 
-    // muat sprite
+    // load sprite
     const src = await pickSpritePath(idx);
     const img = new Image(); img.src = src; await img.decode().catch(()=>{});
     GAME.bird.img = img;
 
-    // mulai
     startModal.style.display='none';
     bgm.currentTime=0; bgm.volume=.35; bgm.play().catch(()=>{});
     GAME.running = true; resetGame(); draw(); update();
@@ -221,7 +312,7 @@
         body: JSON.stringify({ name: GAME.name || 'anon', score: GAME.score })
       });
     }catch(_){}
-    // balik ke menu
+    // kembali ke menu
     setTimeout(()=>{ startModal.style.display='grid'; }, 600);
   }
 
@@ -250,21 +341,26 @@
 
   // ========= bind UI =========
   window.addEventListener('DOMContentLoaded', async ()=>{
+    resizeCanvas();
     await renderCharacterGrid();
+
     onTap($('#startBtn'), startGame);
     onTap($('#leaderboardBtn'), openLeaderboard);
-    onTap(flapBtn, flap);
-    // tap/click canvas utk flap
-    onTap(cvs, flap);
+
+    // TAP/KLIK DIMANA SAJA UNTUK FLAP
+    onTap(document.body, ()=> flap());
+    onTap(cvs, ()=> flap());
+
     // keyboard
     window.addEventListener('keydown', (e)=>{
       if(e.code==='Space') { e.preventDefault(); flap(); }
       if(e.key.toLowerCase()==='c'){
-        // quick switch character
-        const next = ((GAME.spriteIndex||1) % 4) + 1;
-        const radio = document.querySelector(`input[name="lamu"][value="${next}"]`);
-        if(radio) radio.checked = true;
-        GAME.spriteIndex = next;
+        if(startModal.style.display!=='none'){
+          const current = Number((document.querySelector('input[name="lamu"]:checked')||{value:1}).value);
+          const next = (current % 4) + 1;
+          const radio = document.querySelector(`input[name="lamu"][value="${next}"]`);
+          if(radio) radio.checked = true;
+        }
       }
     });
   });
