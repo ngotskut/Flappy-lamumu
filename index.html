@@ -5,6 +5,23 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <title>Flappy Lamumu</title>
 <style>
+  /* --- UI tweaks requested --- */
+
+/* 1) Pusatkan semua teks di panel start */
+#startPanel{ text-align:center; }
+
+/* 2) Pusatkan isi kartu di grid */
+.row.grid-4{ justify-items:center; }
+
+/* 3) Sembunyikan caption "Lamumu #n" */
+.card .muted{ display:none; }
+
+/* 4) Sembunyikan tulisan "Use #n" tetapi tetap tampilkan radio-dot */
+.card div:last-child{ font-size:0; line-height:1; }
+.card div:last-child input[type="radio"]{
+  transform: scale(1.35);      /* biar titik pilihannya sedikit lebih besar */
+  vertical-align: middle;
+}
   :root{ --ui-bg:rgba(255,255,255,.96); --ui-radius:18px; --brand:#2563eb; }
   html,body{height:100%;margin:0}
   body{background:#6b8f99;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;overflow:hidden}
