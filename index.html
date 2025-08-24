@@ -1,83 +1,71 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <title>Flappy Lamumu</title>
 <style>
-  :root{
-    --ui-bg: rgba(255,255,255,.92);
-    --ui-radius:16px;
-    --brand:#2563eb;
-  }
+  :root{ --ui-bg:rgba(255,255,255,.92); --ui-radius:16px; --brand:#2563eb; }
   html,body{height:100%;margin:0}
   body{background:#6b8f99;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;overflow:hidden}
-  #game{position:fixed;inset:0;display:block;background:linear-gradient(#cfefff,#bde6fd)}
-  #score{position:fixed;top:8px;left:50%;transform:translateX(-50%);font-weight:700;font-size:16px}
-  /* Start panel */
+  #wrap{position:fixed;inset:0}
+  #game{position:absolute;inset:0;display:block;background:linear-gradient(#cfefff,#bde6fd)}
+  #score{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-weight:700;font-size:16px;pointer-events:none}
   #startPanel{
-    position:fixed;left:50%;bottom:24px;transform:translateX(-50%);
+    position:absolute;left:50%;bottom:24px;transform:translateX(-50%);
     background:var(--ui-bg);backdrop-filter:saturate(1.2) blur(8px);
     border-radius:var(--ui-radius);box-shadow:0 10px 30px rgba(0,0,0,.2);
-    padding:18px;max-width:min(680px,92vw)
+    padding:18px;max-width:min(680px,92vw);z-index:5
   }
   #startPanel h2{margin:6px 0 10px;font-size:22px}
+  .muted{color:#4b5563;font-size:12px}
   .row{display:grid;gap:10px}
   .grid-4{grid-template-columns:repeat(4,1fr)}
-  .card{
-    border:1px solid #e5e7eb;border-radius:12px;padding:10px;text-align:center;background:#fff
-  }
+  .card{border:1px solid #e5e7eb;border-radius:12px;padding:10px;text-align:center;background:#fff}
   .card img{width:72px;height:72px;object-fit:contain;display:block;margin:4px auto 6px}
-  .muted{color:#4b5563;font-size:12px}
   .actions{display:flex;gap:10px;justify-content:center;margin-top:10px}
-  .btn{
-    appearance:none;border:0;border-radius:999px;padding:10px 16px;font-weight:600;
-    background:#e5e7eb;cursor:pointer
-  }
+  .btn{appearance:none;border:0;border-radius:999px;padding:10px 16px;font-weight:600;background:#e5e7eb;cursor:pointer}
   .btn.primary{background:var(--brand);color:#fff}
-  input[type="text"]{
-    width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;background:#fff
-  }
-  /* Mobile safe area */
-  @supports(padding:max(0px)){
-    #startPanel{padding-bottom:calc(18px + env(safe-area-inset-bottom))}
-  }
+  input[type="text"]{width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;background:#fff}
+  @supports(padding:max(0px)){ #startPanel{padding-bottom:calc(18px + env(safe-area-inset-bottom))} }
 </style>
 </head>
 <body>
-<canvas id="game"></canvas>
-<div id="score">Score: 0</div>
+<div id="wrap">
+  <canvas id="game"></canvas>
+  <div id="score">Score: 0</div>
 
-<!-- Start panel -->
-<div id="startPanel">
-  <h2>Flappy Lamumu 🐮</h2>
-  <div class="muted">Tap / Click anywhere to flap · Press C to switch character quickly</div>
-  <div style="margin:10px 0">
-    <input id="playerName" type="text" placeholder="Enter your name (optional)">
-  </div>
-  <div class="row grid-4">
-    <label class="card">
-      <img src="assets/lamumu1.png" alt="Lamumu #1"><div class="muted">Lamumu #1</div>
-      <div><input type="radio" name="char" value="0" checked> Use #1</div>
-    </label>
-    <label class="card">
-      <img src="assets/lamumu2.png" alt="Lamumu #2"><div class="muted">Lamumu #2</div>
-      <div><input type="radio" name="char" value="1"> Use #2</div>
-    </label>
-    <label class="card">
-      <img src="assets/lamumu3.png" alt="Lamumu #3"><div class="muted">Lamumu #3</div>
-      <div><input type="radio" name="char" value="2"> Use #3</div>
-    </label>
-    <label class="card">
-      <img src="assets/lamumu4.png" alt="Lamumu #4"><div class="muted">Lamumu #4</div>
-      <div><input type="radio" name="char" value="3"> Use #4</div>
-    </label>
-  </div>
-  <div class="actions">
-    <button id="btnStart" class="btn primary">Start</button>
-  </div>
-  <div class="muted" style="text-align:center;margin-top:6px">
-    Tip: You can change character during play by pressing <b>C</b>.
+  <div id="startPanel">
+    <h2>Flappy Lamumu 🐮</h2>
+    <div class="muted">Tap / Click anywhere on the game to flap · Press <b>C</b> to switch character quickly</div>
+    <div style="margin:10px 0">
+      <input id="playerName" type="text" placeholder="Enter your name (optional)">
+    </div>
+    <div class="row grid-4">
+      <label class="card">
+        <img src="assets/lamumu1.png" alt="Lamumu #1"><div class="muted">Lamumu #1</div>
+        <div><input type="radio" name="char" value="0" checked> Use #1</div>
+      </label>
+      <label class="card">
+        <img src="assets/lamumu2.png" alt="Lamumu #2"><div class="muted">Lamumu #2</div>
+        <div><input type="radio" name="char" value="1"> Use #2</div>
+      </label>
+      <label class="card">
+        <img src="assets/lamumu3.png" alt="Lamumu #3"><div class="muted">Lamumu #3</div>
+        <div><input type="radio" name="char" value="2"> Use #3</div>
+      </label>
+      <label class="card">
+        <img src="assets/lamumu4.png" alt="Lamumu #4"><div class="muted">Lamumu #4</div>
+        <div><input type="radio" name="char" value="3"> Use #4</div>
+      </label>
+    </div>
+    <div class="actions">
+      <button id="btnStart" class="btn primary">Start</button>
+      <button id="btnLb" class="btn" type="button">Leaderboard (coming soon)</button>
+    </div>
+    <div class="muted" style="text-align:center;margin-top:6px">
+      Tip: You can change character during play by pressing <b>C</b>.
+    </div>
   </div>
 </div>
 
@@ -92,22 +80,23 @@
   ];
   const BONUS_SRC = 'assets/bonus.png';
 
-  // ---------- CANVAS ----------
+  // ---------- ELEMENTS ----------
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
   const scoreEl = document.getElementById('score');
   const startPanel = document.getElementById('startPanel');
-  const nameInput = document.getElementById('playerName');
   const btnStart = document.getElementById('btnStart');
+  const btnLb = document.getElementById('btnLb');
 
+  // ---------- SIZE ----------
   let W = 0, H = 0, DPR = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-  function resize() {
+  function resize(){
     W = Math.floor(window.innerWidth);
     H = Math.floor(window.innerHeight);
-    canvas.width = Math.floor(W * DPR);
-    canvas.height = Math.floor(H * DPR);
-    canvas.style.width = W + 'px';
-    canvas.style.height = H + 'px';
+    canvas.width = Math.floor(W*DPR);
+    canvas.height = Math.floor(H*DPR);
+    canvas.style.width = W+'px';
+    canvas.style.height = H+'px';
     ctx.setTransform(DPR,0,0,DPR,0,0);
   }
   window.addEventListener('resize', resize, {passive:true});
@@ -119,11 +108,11 @@
     started:false,
     score:0,
     time:0,
-    speed:190,        // px/s (base)
-    speedMax:420,     // cap
-    speedGain:0.045,  // per point
-    gravity:900,      // px/s²
-    flapVel: -350,    // px/s (up)
+    speed:190,
+    speedMax:420,
+    speedGain:0.045,
+    gravity:900,
+    flapVel:-350,
     charIndex:0,
   };
 
@@ -131,19 +120,18 @@
   const pipes = [];
   const PIPE = {
     width: Math.max(80, Math.floor(W*0.08)),
-    gapBase: Math.max(160, Math.floor(H*0.28)), // gap stays constant (easy)
-    spawnMin: Math.max(240, Math.floor(W*0.36)), // horizontal distance between pipes (min)
-    spawnMax: Math.max(280, Math.floor(W*0.42)), // for a bit of randomness
-    lastSpawnX: 0
+    gapBase: Math.max(160, Math.floor(H*0.28)),  // constant/easy
+    spawnMin: Math.max(240, Math.floor(W*0.36)),
+    spawnMax: Math.max(280, Math.floor(W*0.42))
   };
 
-  // bonus (always in gap center)
+  // bonus
   const bonuses = [];
   const BONUS = {
-    sizeBase: Math.max(34, Math.floor(Math.min(W,H)*0.05)), // visual size
-    rotateSpeed: 2.0, // rad/s
-    chance: 0.65,     // 65% spawn with a new pipe
-    yOffset: 20       // random offset +/- pixels inside the gap
+    sizeBase: Math.max(34, Math.floor(Math.min(W,H)*0.05)),
+    rotateSpeed: 2.0,
+    chance: 0.65,
+    yOffset: 20
   };
 
   // player
@@ -151,106 +139,80 @@
     x: Math.max(80, Math.floor(W*0.18)),
     y: Math.floor(H*0.45),
     vy: 0,
-    r: Math.max(22, Math.floor(Math.min(W,H)*0.024)), // collision radius
-    sprite:null,
+    r: Math.max(22, Math.floor(Math.min(W,H)*0.024)),
+    sprite: null
   };
 
   // ---------- LOAD IMAGES ----------
-  const charImgs = CHAR_SRCS.map(src => {
-    const im = new Image(); im.src = src; return im;
-  });
+  const charImgs = CHAR_SRCS.map(src => { const im = new Image(); im.src = src; return im; });
   const bonusImg = new Image(); bonusImg.src = BONUS_SRC;
 
-  // ---------- INPUT ----------
-  const flap = () => { if(state.running) player.vy = state.flapVel; };
-  function handleDown(e){
-    // ignore taps on inputs/panel
-    if (!state.running) return;
-    flap();
-  }
-  window.addEventListener('mousedown', handleDown);
-  window.addEventListener('touchstart', (e)=>{ e.preventDefault(); handleDown(e); }, {passive:false});
+  // ---------- INPUT (ON CANVAS ONLY) ----------
+  function flap(){ if(state.running){ player.vy = state.flapVel; } }
+  canvas.addEventListener('mousedown', ()=>flap());
+  canvas.addEventListener('touchstart', (e)=>{ e.preventDefault(); flap(); }, {passive:false});
   window.addEventListener('keydown', e=>{
     if(e.code==='Space'){ e.preventDefault(); flap(); }
-    if(e.key==='c' || e.key==='C'){ // quick swap character
+    if(e.key==='c' || e.key==='C'){
       state.charIndex = (state.charIndex+1) % charImgs.length;
       player.sprite = charImgs[state.charIndex];
     }
   });
 
-  // ---------- START ----------
-  btnStart.addEventListener('click', () => startGame());
+  // ---------- UI ----------
+  btnStart.addEventListener('click', startGame);
+  btnLb.addEventListener('click', ()=>alert('Leaderboard will be added soon.'));
+
   function startGame(){
-    // pick selected char
     const selected = document.querySelector('input[name="char"]:checked');
     state.charIndex = selected ? +selected.value : 0;
     player.sprite = charImgs[state.charIndex];
 
-    // reset
     state.running = true;
     state.started = true;
     state.score = 0;
     state.time = 0;
     state.speed = 190;
+
     player.x = Math.max(80, Math.floor(W*0.18));
     player.y = Math.floor(H*0.45);
     player.vy = 0;
+
     pipes.length = 0;
     bonuses.length = 0;
-    PIPE.lastSpawnX = 0;
 
     startPanel.style.display = 'none';
   }
 
-  // ---------- PIPE / BONUS SPAWN ----------
-  function shouldSpawnPipe(lastX){
-    if(pipes.length === 0) return true;
+  // ---------- SPAWN ----------
+  const rand = (a,b)=>a+Math.random()*(b-a);
+  const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
+
+  function shouldSpawnPipe(){
+    if (pipes.length===0) return true;
     const last = pipes[pipes.length-1];
     return (W - last.x) >= rand(PIPE.spawnMin, PIPE.spawnMax);
   }
   function spawnPipe(){
-    const gap = PIPE.gapBase; // constant (no shrinking)
-    const topY = rand(50, Math.max(50, H - gap - 120));
-    const p = {
-      x: W + 10,
-      y: topY,
-      width: PIPE.width,
-      gap: gap,
-      passed:false
-    };
+    const gap = PIPE.gapBase;
+    const topY = rand(50, Math.max(50, H-gap-120));
+    const p = { x: W+10, y: topY, width: PIPE.width, gap, passed:false };
     pipes.push(p);
-
-    // maybe spawn a bonus aligned to this pipe gap
     if (Math.random() < BONUS.chance) spawnBonusAtPipe(p);
   }
   function spawnBonusAtPipe(pipe){
-    const gapMiddle = pipe.y + pipe.gap/2;
-    // keep bonus always inside the gap with small offset
-    const offset = clamp((Math.random()-0.5)*2*BONUS.yOffset, -BONUS.yOffset, BONUS.yOffset);
-    const y = clamp(gapMiddle + offset, pipe.y + 20, pipe.y + pipe.gap - 20);
-
-    bonuses.push({
-      x: pipe.x + PIPE.width + 120, // a bit after the pipe
-      y,
-      size: BONUS.sizeBase,
-      angle: 0,
-      collected:false
-    });
+    const gapMid = pipe.y + pipe.gap/2;
+    const y = clamp(gapMid + (Math.random()-0.5)*2*BONUS.yOffset, pipe.y+20, pipe.y+pipe.gap-20);
+    bonuses.push({ x: pipe.x + PIPE.width + 120, y, size: BONUS.sizeBase, angle:0, collected:false });
   }
 
-  // ---------- UTILS ----------
-  const clamp = (v,min,max)=>Math.max(min,Math.min(max,v));
-  const rand = (a,b)=> a + Math.random()*(b-a);
-
-  // ---------- GAME LOOP ----------
+  // ---------- LOOP ----------
   let last = performance.now();
   function loop(now){
     const dt = Math.min(0.033, (now-last)/1000);
     last = now;
 
-    if(state.running){
-      update(dt);
-    }
+    if (state.running) update(dt);
     draw();
     requestAnimationFrame(loop);
   }
@@ -258,130 +220,87 @@
 
   function update(dt){
     state.time += dt;
-
-    // increase speed by score (capped)
     state.speed = Math.min(state.speedMax, 190 + state.score*state.speedGain*30);
 
-    // spawn pipes
     if (shouldSpawnPipe()) spawnPipe();
 
-    // move pipes
+    // move pipes & score
     for (let i=pipes.length-1;i>=0;i--){
       const p = pipes[i];
       p.x -= state.speed * dt;
       if (p.x + p.width < -10) pipes.splice(i,1);
-      // scoring when passing the center of pipe
       if (!p.passed && p.x + p.width < player.x){
-        p.passed = true;
-        state.score += 1;
+        p.passed = true; state.score += 1;
       }
     }
 
-    // gravity
+    // physics
     player.vy += state.gravity * dt;
-    player.y += player.vy * dt;
+    player.y  += player.vy * dt;
 
-    // collide with pipes
+    // collisions
     for (const p of pipes){
-      // top rect: (p.x, 0, p.width, p.y)
-      // bottom rect: (p.x, p.y+p.gap, p.width, H-(p.y+p.gap))
-      if (circleRectCollide(player.x, player.y, player.r, p.x, 0, p.width, p.y) ||
-          circleRectCollide(player.x, player.y, player.r, p.x, p.y+p.gap, p.width, H-(p.y+p.gap))){
-        gameOver();
-        return;
+      if (circleRect(player.x,player.y,player.r, p.x,0,p.width,p.y) ||
+          circleRect(player.x,player.y,player.r, p.x,p.y+p.gap,p.width,H-(p.y+p.gap))){
+        return gameOver();
       }
     }
-
-    // keep inside screen
-    if (player.y > H-2 || player.y < -20){
-      gameOver(); return;
-    }
+    if (player.y > H-2 || player.y < -20) return gameOver();
 
     // bonuses
     for (let i=bonuses.length-1;i>=0;i--){
       const b = bonuses[i];
-      b.x -= state.speed * dt;
-      b.angle += BONUS.rotateSpeed * dt;
-
-      // collect
+      b.x -= state.speed*dt; b.angle += 2.0*dt;
       if (!b.collected && dist(player.x,player.y,b.x,b.y) < (player.r + b.size*0.5*0.8)){
-        b.collected = true;
-        state.score += 100;
-        bonuses.splice(i,1);
-        continue;
+        state.score += 100; bonuses.splice(i,1); continue;
       }
       if (b.x < -80) bonuses.splice(i,1);
     }
 
-    // update score UI
     scoreEl.textContent = 'Score: ' + state.score;
   }
 
   function draw(){
-    // clear background (gradient already set via CSS).
     ctx.clearRect(0,0,W,H);
 
-    // Pipes
+    // pipes
     ctx.fillStyle = '#1f4fd1';
     for (const p of pipes){
-      // top
       ctx.fillRect(p.x, 0, p.width, p.y);
-      // bottom
-      ctx.fillRect(p.x, p.y + p.gap, p.width, H - (p.y + p.gap));
+      ctx.fillRect(p.x, p.y+p.gap, p.width, H-(p.y+p.gap));
     }
 
-    // Bonuses (rotating image)
+    // bonuses
     for (const b of bonuses){
-      const s = b.size;
       ctx.save();
-      ctx.translate(b.x, b.y);
+      ctx.translate(b.x,b.y);
       ctx.rotate(b.angle);
-      if (bonusImg.complete){
-        ctx.drawImage(bonusImg, -s/2, -s/2, s, s);
-      }else{
-        ctx.fillStyle = '#ff3b3b';
-        ctx.beginPath(); ctx.arc(0,0,s/2,0,Math.PI*2); ctx.fill();
-      }
+      const s=b.size;
+      if (bonusImg.complete) ctx.drawImage(bonusImg,-s/2,-s/2,s,s);
+      else { ctx.fillStyle='#ff3b3b'; ctx.beginPath(); ctx.arc(0,0,s/2,0,Math.PI*2); ctx.fill(); }
       ctx.restore();
     }
 
-    // Player
-    if (player.sprite && player.sprite.complete){
-      const scale = 1.15; // a little bigger
-      const s = player.r*2.2*scale;
+    // player (draw hanya saat game berjalan)
+    if (state.running && player.sprite && player.sprite.complete){
+      const s = player.r*2.2*1.15;
       ctx.drawImage(player.sprite, player.x - s/2, player.y - s/2, s, s);
-    }else{
-      // fallback circle
-      ctx.fillStyle = '#222';
-      ctx.beginPath(); ctx.arc(player.x, player.y, player.r, 0, Math.PI*2); ctx.fill();
     }
   }
 
   function gameOver(){
     state.running = false;
-    // show panel again
     startPanel.style.display = 'block';
-    // reset score text (keep last shown)
   }
 
-  // ---------- helpers ----------
-  function circleRectCollide(cx, cy, cr, rx, ry, rw, rh){
-    // closest point on rect to circle
+  // helpers
+  function circleRect(cx,cy,cr, rx,ry,rw,rh){
     const tx = clamp(cx, rx, rx+rw);
     const ty = clamp(cy, ry, ry+rh);
-    return ( (cx-tx)*(cx-tx) + (cy-ty)*(cy-ty) ) <= cr*cr;
+    const dx=cx-tx, dy=cy-ty;
+    return dx*dx+dy*dy <= cr*cr;
   }
-  function dist(x1,y1,x2,y2){
-    const dx = x1-x2, dy = y1-y2; return Math.hypot(dx,dy);
-  }
-
-  // ---------- Unlock audio policies (optional placeholder) ----------
-  const unlockAudio = () => {
-    window.removeEventListener('touchstart', unlockAudio);
-    window.removeEventListener('click', unlockAudio);
-  };
-  window.addEventListener('touchstart', unlockAudio, {once:true});
-  window.addEventListener('click', unlockAudio, {once:true});
+  function dist(x1,y1,x2,y2){ const dx=x1-x2, dy=y1-y2; return Math.hypot(dx,dy); }
 })();
 </script>
 </body>
