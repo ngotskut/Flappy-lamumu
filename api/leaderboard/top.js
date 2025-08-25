@@ -1,19 +1,20 @@
-import { kv } from "@vercel/kv";
-
 export default async function handler(_req, res) {
   try {
-    const raw = await kv.zrevrange("lamumu:lb", 0, 99, { withScores: true });
-    const entries = [];
-    for (let i = 0; i < raw.length; i += 2) {
-      entries.push({
-        rank: i / 2 + 1,
-        name: raw[i],
-        score: Number(raw[i + 1]),
-      });
+    const base = process.env.KV_REST_API_URL;
+    const auth = { Authorization: `Bearer ${process.env.KV_REST_API_TOKEN}` };
+
+    // Ambil semua key (jika nama pemain banyak, ini cukup untuk hobi/prototype)
+    const keysResp = await fetch(`${base}/keys/*`, { headers: auth }).then(r => r.json());
+    const keys = keysResp?.result || [];
+
+    const list = [];
+    for (const k of keys) {
+      const v = await fetch(`${base}/get/${encodeURIComponent(k)}`, { headers: auth }).then(r => r.json());
+      list.push({ name: k, score: parseInt(v?.result ?? "0", 10) || 0 });
     }
-    return res.json({ ok: true, entries });
+    list.sort((a, b) => b.score - a.score);
+    return res.status(200).json(list.slice(0, 100)); // Top 100
   } catch (e) {
-    console.error(e);
-    return res.status(500).json({ ok: false, error: "Server error" });
+    return res.status(500).json({ error: e.message || "Server error" });
   }
 }
