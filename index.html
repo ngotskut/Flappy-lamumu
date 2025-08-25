@@ -135,11 +135,15 @@
       <div class="muted" style="text-align:center;margin-top:6px">Tip: You can change character during play by pressing <b>C</b>.</div>
     </div>
   </div>
+
+  <!-- === Audio elements (tambahan) === -->
+  <audio id="bgm" src="assets/sweet-country-farm-music-full-354815.mp3" loop preload="auto"></audio>
+  <audio id="moo" src="assets/cow-moo-390282.mp3" preload="auto"></audio>
 </div>
 
 <script>
 (() => {
-  /* ====== BAGIAN GAME & LEADERBOARD DARI VERSIMU (tidak diubah) ====== */
+  /* ====== BAGIAN GAME & LEADERBOARD DARI VERSIMU (tetap) ====== */
 
   const CHAR_SRCS = [
     'assets/lamumu1.png',
@@ -295,6 +299,14 @@
     state.running=false;
     overlay.style.display='flex';
     validateName();
+
+    // === SFX moo saat game over (tambahan) ===
+    try { 
+      const moo = document.getElementById('moo');
+      moo.currentTime = 0; 
+      await moo.play(); 
+    } catch(_) {}
+
     try{ await saveScore((nameInput.value||'').trim(), state.score); }catch(e){ console.warn(e); }
     openLeaderboard();
   }
@@ -402,6 +414,21 @@
   charRow.addEventListener('touchstart',e=>onDown(e.touches[0].pageX),{passive:true});
   charRow.addEventListener('touchmove',e=>onMove(e.touches[0].pageX),{passive:true});
   charRow.addEventListener('touchend',onUp);
+
+  /* === Mulai BGM setelah interaksi pertama (autoplay policy) === */
+  const bgm = document.getElementById('bgm');
+  if(bgm){
+    bgm.volume = 0.35;
+    let started = false;
+    function unlockBgm(){
+      if(!started){
+        bgm.play().then(()=>{ started = true; }).catch(()=>{});
+      }
+    }
+    window.addEventListener('touchstart', unlockBgm, { once:true, passive:true });
+    window.addEventListener('mousedown',   unlockBgm, { once:true, passive:true });
+    window.addEventListener('keydown',     unlockBgm, { once:true, passive:true });
+  }
 
 })();
 </script>
