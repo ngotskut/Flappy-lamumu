@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <title>Flappy Lamumu</title>
 <style>
+  /* penting agar input tidak melebar keluar panel */
+  *,*::before,*::after{ box-sizing:border-box }
+
   :root{ --ui-bg:rgba(255,255,255,.96); --ui-radius:18px; --brand:#2563eb; }
   html,body{height:100%;margin:0}
   body{background:#6b8f99;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;overflow:hidden}
@@ -21,19 +24,26 @@
   }
   #startPanel h2{margin:6px 0 8px;font-size:22px}
   .muted{color:#4b5563;font-size:12px}
+
   .row{display:grid;gap:12px}
   .grid-4{grid-template-columns:repeat(4,1fr);justify-items:center}
+
   .card{border:1px solid #e5e7eb;border-radius:12px;padding:10px 10px 12px;text-align:center;background:#fff;width:100%}
   .card img{width:72px;height:72px;object-fit:contain;display:block;margin:4px auto 8px}
-  .card .muted{display:none}                 /* sembunyikan "Lamumu #n" */
-  .card div:last-child{font-size:0;line-height:1}
-  .card div:last-child input[type="radio"]{transform:scale(1.35);vertical-align:middle}
+
+  /* Sembunyikan teks "Lamumu #n" dan "Use #n" -> hanya tampil bulatan radio */
+  #startPanel .card .muted{display:none!important}
+  #startPanel .card div:last-child{font-size:0;line-height:1}
+  #startPanel .card div:last-child input[type="radio"]{transform:scale(1.35);vertical-align:middle}
 
   .actions{display:flex;gap:10px;justify-content:center;margin-top:12px}
   .btn{appearance:none;border:0;border-radius:999px;padding:10px 16px;font-weight:600;background:#e5e7eb;cursor:pointer}
   .btn.primary{background:var(--brand);color:#fff}
   .btn[disabled]{opacity:.45;cursor:not-allowed}
-  input[type="text"]{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;background:#fff;font-size:14px}
+
+  input[type="text"]{
+    width:100%;max-width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;background:#fff;font-size:14px
+  }
   input[type="text"].invalid{border-color:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.15)}
   #nameErr{display:none;color:#ef4444;font-size:12px;margin-top:6px}
 </style>
@@ -48,6 +58,7 @@
       <h2>Flappy Lamumu 🐮</h2>
       <div class="muted">Tap / Click anywhere on the game to flap · Press <b>C</b> to switch character quickly</div>
 
+      <!-- input nama rapi & tidak overflow -->
       <div style="margin:12px 0 6px">
         <input id="playerName" type="text" placeholder="Enter your name (required for leaderboard)">
         <div id="nameErr">Please enter at least 3 characters.</div>
@@ -83,7 +94,8 @@
 
 <script>
 (() => {
-  // ---------- ASSETS ----------
+  /* ====== BAGIAN GAME TETAP SAMA, hanya tambah validasi nama ====== */
+
   const CHAR_SRCS = [
     'assets/lamumu1.png',
     'assets/lamumu2.png',
@@ -92,7 +104,6 @@
   ];
   const BONUS_SRC = 'assets/bonus.png';
 
-  // ---------- ELEMENTS ----------
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
   const scoreEl = document.getElementById('score');
@@ -101,10 +112,8 @@
   const nameInput = document.getElementById('playerName');
   const nameErr = document.getElementById('nameErr');
 
-  // restore saved name
+  // restore & validasi nama
   nameInput.value = localStorage.getItem('lamumu_name') || '';
-
-  // live validation for name
   const MIN_NAME = 3;
   function validateName(){
     const ok = (nameInput.value.trim().length >= MIN_NAME);
@@ -117,7 +126,7 @@
   nameInput.addEventListener('blur', validateName);
   validateName();
 
-  // ---------- SIZE ----------
+  // ukuran canvas
   let W=0,H=0,DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
   function resize(){ W=innerWidth|0; H=innerHeight|0;
     canvas.width=(W*DPR)|0; canvas.height=(H*DPR)|0; canvas.style.width=W+'px'; canvas.style.height=H+'px';
@@ -125,22 +134,14 @@
   }
   addEventListener('resize',resize,{passive:true}); resize();
 
-  // ---------- GAME STATE ----------
+  // state
   const state = {
-    running:false,
-    score:0,
-    time:0,
-    speedBase:190,
-    speedMax:420,
-    speed:190,
-    pipesPassed:0,       // hanya ini yang mempengaruhi speed
-    speedPerPipe:2.2,    // naik pelan tiap pipa lolos
-    gravity:900,
-    flapVel:-400,        // flap lebih tinggi
-    charIndex:0,
+    running:false, score:0, time:0,
+    speedBase:190, speedMax:420, speed:190,
+    pipesPassed:0, speedPerPipe:2.2,
+    gravity:900, flapVel:-400, charIndex:0,
   };
 
-  // pipes
   const pipes=[];
   const PIPE = {
     width: Math.max(80,(W*0.08)|0),
@@ -149,23 +150,14 @@
     spawnMax: Math.max(280,(W*0.42)|0)
   };
 
-  // bonus
   const bonuses=[];
-  const BONUS={
-    sizeBase: Math.max(34,(Math.min(W,H)*0.1)|0),
-    rotateSpeed:2.0,
-    chance:0.65,
-    yOffset:20
-  };
+  const BONUS={ sizeBase: Math.max(34,(Math.min(W,H)*0.1)|0), rotateSpeed:2.0, chance:0.65, yOffset:20 };
 
-  // player
   const player={ x:Math.max(80,(W*0.18)|0), y:(H*0.45)|0, vy:0, r:Math.max(22,(Math.min(W,H)*0.024)|0), sprite:null };
 
-  // images
   const charImgs = CHAR_SRCS.map(s=>{const im=new Image(); im.src=s; return im;});
   const bonusImg = new Image(); bonusImg.src=BONUS_SRC;
 
-  // input
   function flap(){ if(state.running){ player.vy=state.flapVel; } }
   canvas.addEventListener('mousedown',flap);
   canvas.addEventListener('touchstart',e=>{e.preventDefault();flap();},{passive:false});
@@ -174,12 +166,10 @@
     if(e.key==='c'||e.key==='C'){ state.charIndex=(state.charIndex+1)%charImgs.length; player.sprite=charImgs[state.charIndex];}
   });
 
-  // UI
   btnStart.addEventListener('click',() => { if (validateName()) startGame(); });
-  function startGame(){
-    // simpan nama untuk sesi berikutnya
-    localStorage.setItem('lamumu_name', nameInput.value.trim());
 
+  function startGame(){
+    localStorage.setItem('lamumu_name', nameInput.value.trim());
     const sel=document.querySelector('input[name="char"]:checked'); state.charIndex=sel?+sel.value:0;
     player.sprite=charImgs[state.charIndex];
     state.running=true; state.score=0; state.time=0; state.pipesPassed=0; state.speed=state.speedBase;
@@ -188,7 +178,6 @@
     overlay.style.display='none';
   }
 
-  // spawn
   const rand=(a,b)=>a+Math.random()*(b-a);
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   function needPipe(){ if(!pipes.length) return true; const last=pipes[pipes.length-1]; return (W-last.x) >= rand(PIPE.spawnMin,PIPE.spawnMax); }
@@ -203,7 +192,6 @@
     bonuses.push({x:p.x + PIPE.width + 120, y, size:BONUS.sizeBase, angle:0});
   }
 
-  // loop
   let last=performance.now();
   function loop(now){
     const dt=Math.min(0.033,(now-last)/1000); last=now;
@@ -214,7 +202,6 @@
 
   function update(dt){
     state.time+=dt;
-    // speed hanya naik karena pipesPassed
     state.speed = Math.min(state.speedMax, state.speedBase + state.pipesPassed*state.speedPerPipe);
 
     if(needPipe()) spawnPipe();
@@ -259,7 +246,6 @@
 
   function gameOver(){ state.running=false; overlay.style.display='flex'; validateName(); }
 
-  // helpers
   function circleRect(cx,cy,cr, rx,ry,rw,rh){
     const tx=Math.max(rx,Math.min(cx,rx+rw)), ty=Math.max(ry,Math.min(cy,ry+rh));
     const dx=cx-tx, dy=cy-ty; return dx*dx+dy*dy <= cr*cr;
