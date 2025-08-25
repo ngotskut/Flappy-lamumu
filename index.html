@@ -5,7 +5,49 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <title>Flappy Lamumu</title>
 <style>
-  <style>
+/* ===== Fix mobile panel & character picker ===== */
+#startPanel{
+  width:min(680px,92vw);
+  max-width:92vw;
+  overflow:hidden;              /* jaga rounded tidak “bocor” */
+}
+
+/* grid default (desktop/tablet) */
+.row{ display:grid; gap:12px; }
+.grid-4{ grid-template-columns:repeat(4, minmax(0,1fr)); justify-items:center; }
+.card{ width:100%; }
+
+/* HP ≤ 480px: 2 kolom agar tidak kepotong */
+@media (max-width: 480px){
+  .grid-4{ grid-template-columns:repeat(2, minmax(0,1fr)); }
+  #startPanel{ padding:18px 14px; }
+  #startPanel h2{ font-size:20px; }
+  #startPanel .card img{ width:64px; height:64px; }
+  #startPanel .card div:last-child input[type="radio"]{ transform:scale(1.15); }
+  input[type="text"]{ font-size:16px; } /* cegah zoom iOS saat fokus */
+}
+
+/* Layar sangat kecil (≤ 340px): fallback 1 kolom */
+@media (max-width: 340px){
+  .grid-4{ grid-template-columns: 1fr; }
+}
+
+/* Opsi tambahan: kalau tetap sempit, aktifkan scroll horizontal yang smooth.
+   Matikan baris di atas dan gunakan block ini sebagai alternatif. */
+/*
+@media (max-width: 480px){
+  .grid-4{
+    display:grid;
+    grid-auto-flow: column;
+    grid-auto-columns: calc(50% - 8px);  /* 2 kartu per “halaman” */
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 6px;
+  }
+  .grid-4 > *{ scroll-snap-align: start; }
+}
+*/
 /* ====== Mobile-safe layout for Start Panel & Leaderboard ====== */
 #startPanel{
   width:min(680px,92vw);
