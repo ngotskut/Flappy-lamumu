@@ -112,6 +112,22 @@
   const nameInput = document.getElementById('playerName');
   const nameErr = document.getElementById('nameErr');
 
+  // === elemen tambahan utk leaderboard (dibuat via JS agar tidak mengubah HTML) ===
+  const startPanel = document.getElementById('startPanel');
+  const btnLb = document.getElementById('btnLb');
+  const lbPanel = document.createElement('div');
+  lbPanel.id = 'lbPanel';
+  lbPanel.style.marginTop = '14px';
+  lbPanel.style.display = 'none';
+  lbPanel.innerHTML = `
+    <h3 style="margin:0 0 8px">Top 100 Leaderboard</h3>
+    <div id="lbList" style="max-height:240px;overflow:auto;border:1px solid #e5e7eb;border-radius:10px;background:#fff">
+      <div class="muted" style="padding:10px">Loading…</div>
+    </div>
+  `;
+  startPanel.appendChild(lbPanel);
+  const lbList = lbPanel.querySelector('#lbList');
+
   // restore & validasi nama
   nameInput.value = localStorage.getItem('lamumu_name') || '';
   const MIN_NAME = 3;
@@ -167,6 +183,7 @@
   });
 
   btnStart.addEventListener('click',() => { if (validateName()) startGame(); });
+  btnLb.addEventListener('click', openLeaderboard);
 
   function startGame(){
     localStorage.setItem('lamumu_name', nameInput.value.trim());
@@ -244,13 +261,75 @@
     }
   }
 
-  function gameOver(){ state.running=false; overlay.style.display='flex'; validateName(); }
+  async function gameOver(){
+    state.running=false;
+    overlay.style.display='flex';
+    validateName();
 
+    // ====== SIMPAN SKOR KE API (tidak mengubah flow lain) ======
+    try{ await saveScore((nameInput.value||'').trim(), state.score); }catch(e){ console.warn(e); }
+
+    // Setelah game over, tampilkan leaderboard
+    openLeaderboard();
+  }
+
+  // ====== SAVE SCORE & LEADERBOARD ======
+  async function saveScore(name, score){
+    if(!name || name.length<3) return; // butuh nama valid
+    await fetch('/api/leaderboard/submit', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ name, score })
+    });
+  }
+
+  async function openLeaderboard(){
+    lbPanel.style.display='block';
+    lbList.innerHTML = '<div class="muted" style="padding:10px">Loading…</div>';
+    try{
+      const res = await fetch('/api/leaderboard/top?limit=100');
+      const data = await res.json();
+      const items = Array.isArray(data?.items) ? data.items : data;
+      renderLeaderboard(items);
+    }catch(e){
+      lbList.innerHTML = '<div class="muted" style="padding:10px">Cannot load leaderboard.</div>';
+      console.warn('load leaderboard failed:', e);
+    }
+  }
+
+  function renderLeaderboard(items){
+    if(!items || !items.length){
+      lbList.innerHTML = '<div class="muted" style="padding:10px">No scores yet.</div>';
+      return;
+    }
+    const rows = items.map((it,i)=>`
+      <tr>
+        <td style="width:48px">${i+1}</td>
+        <td>${escapeHtml(it.name||'anonymous')}</td>
+        <td style="text-align:right">${Number(it.score||0)}</td>
+      </tr>
+    `).join('');
+    lbList.innerHTML = `
+      <table style="width:100%;border-collapse:collapse;font-size:14px">
+        <thead>
+          <tr>
+            <th style="text-align:left;padding:8px 10px;border-bottom:1px solid #f1f5f9;position:sticky;top:0;background:#f8fafc">#</th>
+            <th style="text-align:left;padding:8px 10px;border-bottom:1px solid #f1f5f9;position:sticky;top:0;background:#f8fafc">Name</th>
+            <th style="text-align:right;padding:8px 10px;border-bottom:1px solid #f1f5f9;position:sticky;top:0;background:#f8fafc">Score</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  // helpers
   function circleRect(cx,cy,cr, rx,ry,rw,rh){
     const tx=Math.max(rx,Math.min(cx,rx+rw)), ty=Math.max(ry,Math.min(cy,ry+rh));
     const dx=cx-tx, dy=cy-ty; return dx*dx+dy*dy <= cr*cr;
   }
   function dist(x1,y1,x2,y2){ const dx=x1-x2, dy=y1-y2; return Math.hypot(dx,dy); }
+  function escapeHtml(s){ return (s+'').replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
 })();
 </script>
 </body>
