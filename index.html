@@ -5,6 +5,63 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <title>Flappy Lamumu</title>
 <style>
+  <style>
+/* ====== Mobile-safe layout for Start Panel & Leaderboard ====== */
+#startPanel{
+  width:min(680px,92vw);
+  max-width:92vw;
+}
+
+/* Kontainer leaderboard: selalu muat & bisa scroll */
+#lbPanel{ margin-top:14px; }
+#lbList{
+  max-height:240px;
+  overflow:auto;
+  -webkit-overflow-scrolling:touch;
+  border:1px solid #e5e7eb;
+  border-radius:12px;
+  background:#fff;
+}
+
+/* Tabel: kolom stabil & tidak “geser” di HP */
+#lbList table{
+  width:100%;
+  min-width:320px;          /* biar tidak mepet di HP kecil */
+  border-collapse:collapse;
+  table-layout:fixed;       /* kunci lebar kolom */
+  font-size:14px;
+}
+#lbList thead th{
+  position:sticky; top:0;
+  background:#f8fafc;
+  border-bottom:1px solid #f1f5f9;
+  padding:10px;
+  text-align:left;
+  font-weight:600;
+}
+#lbList tbody td{
+  padding:10px;
+  border-bottom:1px solid #f3f4f6;
+}
+#lbList .col-rank{
+  width:48px;
+  text-align:center;
+}
+#lbList .col-score{
+  width:96px;
+  text-align:right;
+  font-variant-numeric:tabular-nums;
+  font-feature-settings:"tnum" 1,"lnum" 1;
+}
+
+/* Rapikan input & kartu karakter di layar kecil */
+@media (max-width:480px){
+  #startPanel{ padding:18px 14px; }
+  #startPanel h2{ font-size:20px; }
+  #startPanel .card img{ width:64px; height:64px; }
+  #startPanel .card div:last-child input[type="radio"]{ transform:scale(1.15); }
+  input[type="text"]{ font-size:16px; } /* menghindari zoom iOS */
+}
   /* penting agar input tidak melebar keluar panel */
   *,*::before,*::after{ box-sizing:border-box }
 
@@ -325,32 +382,31 @@
       console.warn('load leaderboard failed:', e);
     }
   }
-
-  function renderLeaderboard(items){
-    if(!items || !items.length){
-      lbList.innerHTML = '<div class="muted" style="padding:10px">No scores yet.</div>';
-      return;
-    }
-    const rows = items.map((it,i)=>`
-      <tr>
-        <td class="col-rank">${i+1}</td>
-        <td>${escapeHtml(it.name||'anonymous')}</td>
-        <td class="col-score">${Number(it.score||0)}</td>
-      </tr>
-    `).join('');
-    lbList.innerHTML = `
-      <table>
-        <thead>
-          <tr>
-            <th class="col-rank">#</th>
-            <th>Name</th>
-            <th class="col-score">Score</th>
-          </tr>
-        </thead>
-        <tbody>${rows}</tbody>
-      </table>
-    `;
+function renderLeaderboard(items){
+  if(!items || !items.length){
+    lbList.innerHTML = '<div class="muted" style="padding:10px">No scores yet.</div>';
+    return;
   }
+  const rows = items.map((it,i)=>`
+    <tr>
+      <td class="col-rank">${i+1}</td>
+      <td>${escapeHtml(it.name||'anonymous')}</td>
+      <td class="col-score">${Number(it.score||0)}</td>
+    </tr>
+  `).join('');
+  lbList.innerHTML = `
+    <table class="lb-table">
+      <thead>
+        <tr>
+          <th class="col-rank">#</th>
+          <th>Name</th>
+          <th class="col-score">Score</th>
+        </tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>
+  `;
+}
 
   // helpers
   function draw(){
