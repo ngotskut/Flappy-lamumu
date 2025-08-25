@@ -1,46 +1,26 @@
-import { kv } from "@vercel/kv";
-
-function sanitizeName(raw) {
-  return String(raw || "")
-    .trim()
-    .slice(0, 16)
-    .replace(/[^a-zA-Z0-9 _.\-]/g, "");
-}
-
 export default async function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ ok: false, error: "Method not allowed" });
-  }
+  if (req.method !== "POST") return res.status(405).json({ error: "Method not allowed" });
   try {
-    const body = typeof req.body === "string" ? JSON.parse(req.body || "{}") : (req.body || {});
-    const { name, score } = body;
+    const { name, score } = req.body || {};
+    if (!name || typeof score !== "number") return res.status(400).json({ error: "Missing name or score" });
 
-    const clean = sanitizeName(name);
-    const s = Number(score);
+    // Simpan hanya skor tertinggi per nama
+    const base = process.env.KV_REST_API_URL;
+    const auth = { Authorization: `Bearer ${process.env.KV_REST_API_TOKEN}` };
 
-    if (!clean || !Number.isFinite(s) || s < 0 || s > 1000000) {
-      return res.status(400).json({ ok: false, error: "Invalid name or score" });
-    }
+    // Ambil skor lama
+    const prev = await fetch(`${base}/get/${encodeURIComponent(name)}`, { headers: auth }).then(r => r.json());
+    const prevScore = parseInt(prev?.result ?? "0", 10) || 0;
+    const best = Math.max(prevScore, score);
 
-    // read current best
-    const current = await kv.zscore("lamumu:lb", clean);
-    const currentScore = current == null ? null : Number(current);
+    // Tulis skor baru (atau pertahankan yang lama jika lebih tinggi)
+    const resp = await fetch(`${base}/set/${encodeURIComponent(name)}/${best}`, {
+      method: "POST",
+      headers: auth
+    }).then(r => r.json());
 
-    // update if better
-    if (currentScore == null || s > currentScore) {
-      await kv.zadd("lamumu:lb", { score: s, member: clean });
-
-      // trim to Top-100 (Redis ZSET ascending = rank 0 = lowest)
-      const size = await kv.zcard("lamumu:lb");
-      if (size > 100) {
-        await kv.zremrangebyrank("lamumu:lb", 0, size - 101);
-      }
-    }
-
-    const best = await kv.zscore("lamumu:lb", clean);
-    return res.json({ ok: true, name: clean, best: Number(best) });
+    return res.status(200).json({ ok: true, saved: best, upstash: resp });
   } catch (e) {
-    console.error(e);
-    return res.status(500).json({ ok: false, error: "Server error" });
+    return res.status(500).json({ error: e.message || "Server error" });
   }
 }
