@@ -5,105 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <title>Flappy Lamumu</title>
 <style>
-/* ===== Fix mobile panel & character picker ===== */
-#startPanel{
-  width:min(680px,92vw);
-  max-width:92vw;
-  overflow:hidden;              /* jaga rounded tidak “bocor” */
-}
-
-/* grid default (desktop/tablet) */
-.row{ display:grid; gap:12px; }
-.grid-4{ grid-template-columns:repeat(4, minmax(0,1fr)); justify-items:center; }
-.card{ width:100%; }
-
-/* HP ≤ 480px: 2 kolom agar tidak kepotong */
-@media (max-width: 480px){
-  .grid-4{ grid-template-columns:repeat(2, minmax(0,1fr)); }
-  #startPanel{ padding:18px 14px; }
-  #startPanel h2{ font-size:20px; }
-  #startPanel .card img{ width:64px; height:64px; }
-  #startPanel .card div:last-child input[type="radio"]{ transform:scale(1.15); }
-  input[type="text"]{ font-size:16px; } /* cegah zoom iOS saat fokus */
-}
-
-/* Layar sangat kecil (≤ 340px): fallback 1 kolom */
-@media (max-width: 340px){
-  .grid-4{ grid-template-columns: 1fr; }
-}
-
-/* Opsi tambahan: kalau tetap sempit, aktifkan scroll horizontal yang smooth.
-   Matikan baris di atas dan gunakan block ini sebagai alternatif. */
-/*
-@media (max-width: 480px){
-  .grid-4{
-    display:grid;
-    grid-auto-flow: column;
-    grid-auto-columns: calc(50% - 8px);  /* 2 kartu per “halaman” */
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scroll-snap-type: x mandatory;
-    padding-bottom: 6px;
-  }
-  .grid-4 > *{ scroll-snap-align: start; }
-}
-*/
-/* ====== Mobile-safe layout for Start Panel & Leaderboard ====== */
-#startPanel{
-  width:min(680px,92vw);
-  max-width:92vw;
-}
-
-/* Kontainer leaderboard: selalu muat & bisa scroll */
-#lbPanel{ margin-top:14px; }
-#lbList{
-  max-height:240px;
-  overflow:auto;
-  -webkit-overflow-scrolling:touch;
-  border:1px solid #e5e7eb;
-  border-radius:12px;
-  background:#fff;
-}
-
-/* Tabel: kolom stabil & tidak “geser” di HP */
-#lbList table{
-  width:100%;
-  min-width:320px;          /* biar tidak mepet di HP kecil */
-  border-collapse:collapse;
-  table-layout:fixed;       /* kunci lebar kolom */
-  font-size:14px;
-}
-#lbList thead th{
-  position:sticky; top:0;
-  background:#f8fafc;
-  border-bottom:1px solid #f1f5f9;
-  padding:10px;
-  text-align:left;
-  font-weight:600;
-}
-#lbList tbody td{
-  padding:10px;
-  border-bottom:1px solid #f3f4f6;
-}
-#lbList .col-rank{
-  width:48px;
-  text-align:center;
-}
-#lbList .col-score{
-  width:96px;
-  text-align:right;
-  font-variant-numeric:tabular-nums;
-  font-feature-settings:"tnum" 1,"lnum" 1;
-}
-
-/* Rapikan input & kartu karakter di layar kecil */
-@media (max-width:480px){
-  #startPanel{ padding:18px 14px; }
-  #startPanel h2{ font-size:20px; }
-  #startPanel .card img{ width:64px; height:64px; }
-  #startPanel .card div:last-child input[type="radio"]{ transform:scale(1.15); }
-  input[type="text"]{ font-size:16px; } /* menghindari zoom iOS */
-}
   /* penting agar input tidak melebar keluar panel */
   *,*::before,*::after{ box-sizing:border-box }
 
@@ -124,13 +25,24 @@
   #startPanel h2{margin:6px 0 8px;font-size:22px}
   .muted{color:#4b5563;font-size:12px}
 
-  .row{display:grid;gap:12px}
-  .grid-4{grid-template-columns:repeat(4,1fr);justify-items:center}
+  /* === Slider karakter (horizontal scroll + drag) === */
+  #charRow{
+    display:flex; gap:12px; align-items:stretch;
+    overflow-x:auto; -webkit-overflow-scrolling:touch; scroll-behavior:smooth;
+    padding-bottom:4px; margin-top:10px;
+  }
+  /* sembunyikan scrollbar agar bersih */
+  #charRow::-webkit-scrollbar{height:0}
+  #charRow{scrollbar-width:none}
 
-  .card{border:1px solid #e5e7eb;border-radius:12px;padding:10px 10px 12px;text-align:center;background:#fff;width:100%}
+  .card{
+    flex:0 0 160px; /* lebar kartu tetap agar mudah di-swipe */
+    border:1px solid #e5e7eb;border-radius:12px;padding:10px 10px 12px;
+    text-align:center;background:#fff
+  }
   .card img{width:72px;height:72px;object-fit:contain;display:block;margin:4px auto 8px}
 
-  /* Sembunyikan teks "Lamumu #n" dan "Use #n" -> hanya tampil bulatan radio */
+  /* Hanya tampil bulatan radio (tanpa teks) */
   #startPanel .card .muted{display:none!important}
   #startPanel .card div:last-child{font-size:0;line-height:1}
   #startPanel .card div:last-child input[type="radio"]{transform:scale(1.35);vertical-align:middle}
@@ -146,20 +58,39 @@
   input[type="text"].invalid{border-color:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.15)}
   #nameErr{display:none;color:#ef4444;font-size:12px;margin-top:6px}
 
-  /* Leaderboard table layout */
-  #lbPanel h3{font-size:16px;margin:0 0 8px}
-  #lbList table{width:100%;border-collapse:collapse;font-size:14px}
-  #lbList thead th{
-    position:sticky;top:0;background:#f8fafc;border-bottom:1px solid #f1f5f9;
-    padding:8px 10px;text-align:left;font-weight:600
+  /* === Leaderboard: presisi kolom === */
+  #lbPanel h3{font-size:16px}
+  #lbList table{
+    width:100%;
+    border-collapse:collapse;
+    table-layout:fixed;                 /* kunci layout kolom */
+    font-size:14px;
   }
-  #lbList tbody td{padding:8px 10px;border-bottom:1px solid #f8fafc}
-  #lbList .col-rank{width:52px}
-  #lbList .col-score{
-    width:100px;text-align:right;
+  #lbList thead th,
+  #lbList tbody td{
+    padding:10px 14px;
+    border-bottom:1px solid #eef2f7;
+    vertical-align:middle;
+    white-space:nowrap;
+  }
+  /* Kolom rank (#) */
+  #lbList thead th:nth-child(1),
+  #lbList tbody td:nth-child(1){
+    width:52px;text-align:center;
+  }
+  /* Kolom Name */
+  #lbList thead th:nth-child(2),
+  #lbList tbody td:nth-child(2){
+    width:auto;text-align:left;
+  }
+  /* Kolom Score */
+  #lbList thead th:nth-child(3),
+  #lbList tbody td:nth-child(3){
+    width:96px;text-align:right;
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum" 1, "lnum" 1;
   }
+  #lbList thead th{background:#f6f8fb;font-weight:700}
 </style>
 </head>
 <body>
@@ -167,22 +98,18 @@
   <canvas id="game"></canvas>
   <div id="score">Score: 0</div>
 
-  <!-- 🔊 AUDIO (disembunyikan) -->
-  <audio id="bgm" src="assets/sweet-country-farm-music-full-354815.mp3" loop preload="auto"></audio>
-  <audio id="moo" src="assets/cow-moo-390282.mp3" preload="auto"></audio>
-
   <div id="overlay">
     <div id="startPanel">
       <h2>Flappy Lamumu 🐮</h2>
       <div class="muted">Tap / Click anywhere on the game to flap · Press <b>C</b> to switch character quickly</div>
 
-      <!-- input nama -->
       <div style="margin:12px 0 6px">
         <input id="playerName" type="text" placeholder="Enter your name (required for leaderboard)">
         <div id="nameErr">Please enter at least 3 characters.</div>
       </div>
 
-      <div class="row grid-4" style="margin-top:10px">
+      <!-- slider karakter -->
+      <div id="charRow" aria-label="Choose character">
         <label class="card">
           <img src="assets/lamumu1.png" alt="Lamumu 1">
           <div><input type="radio" name="char" value="0" checked></div>
@@ -212,7 +139,7 @@
 
 <script>
 (() => {
-  /* ====== GAME + LEADERBOARD + AUDIO ====== */
+  /* ====== BAGIAN GAME & LEADERBOARD DARI VERSIMU (tidak diubah) ====== */
 
   const CHAR_SRCS = [
     'assets/lamumu1.png',
@@ -230,25 +157,7 @@
   const nameInput = document.getElementById('playerName');
   const nameErr = document.getElementById('nameErr');
 
-  // 🔊 Audio elements
-  const bgm = document.getElementById('bgm');
-  const moo = document.getElementById('moo');
-  bgm.volume = 0.35;
-  moo.volume = 0.7;
-
-  // unlock audio on first interaction (mobile policy)
-  function unlockAudioOnce(){
-    [bgm, moo].forEach(a=>{
-      if(!a) return;
-      a.muted = false;
-      a.play().then(()=>a.pause()).catch(()=>{});
-    });
-  }
-  window.addEventListener('touchstart', unlockAudioOnce, { once:true, passive:true });
-  window.addEventListener('mousedown',   unlockAudioOnce, { once:true, passive:true });
-  window.addEventListener('keydown',     unlockAudioOnce, { once:true, passive:true });
-
-  // === elemen leaderboard
+  // buat panel leaderboard
   const startPanel = document.getElementById('startPanel');
   const btnLb = document.getElementById('btnLb');
   const lbPanel = document.createElement('div');
@@ -256,7 +165,7 @@
   lbPanel.style.marginTop = '14px';
   lbPanel.style.display = 'none';
   lbPanel.innerHTML = `
-    <h3>Top 100 Leaderboard</h3>
+    <h3 style="margin:0 0 8px">Top 100 Leaderboard</h3>
     <div id="lbList" style="max-height:240px;overflow:auto;border:1px solid #e5e7eb;border-radius:10px;background:#fff">
       <div class="muted" style="padding:10px">Loading…</div>
     </div>
@@ -264,7 +173,7 @@
   startPanel.appendChild(lbPanel);
   const lbList = lbPanel.querySelector('#lbList');
 
-  // restore & validasi nama
+  // validasi nama
   nameInput.value = localStorage.getItem('lamumu_name') || '';
   const MIN_NAME = 3;
   function validateName(){
@@ -329,8 +238,6 @@
     player.x=Math.max(80,(W*0.18)|0); player.y=(H*0.45)|0; player.vy=0;
     pipes.length=0; bonuses.length=0;
     overlay.style.display='none';
-    // 🔊 mulai BGM
-    try{ bgm.currentTime = 0; bgm.play(); }catch(e){}
   }
 
   const rand=(a,b)=>a+Math.random()*(b-a);
@@ -388,15 +295,7 @@
     state.running=false;
     overlay.style.display='flex';
     validateName();
-
-    // 🔊 SFX & hentikan BGM (hapus baris pause jika mau musik tetap jalan)
-    try{ moo.currentTime = 0; moo.play(); }catch(e){}
-    try{ bgm.pause(); }catch(e){}
-
-    // simpan skor
     try{ await saveScore((nameInput.value||'').trim(), state.score); }catch(e){ console.warn(e); }
-
-    // tampilkan leaderboard
     openLeaderboard();
   }
 
@@ -424,33 +323,33 @@
       console.warn('load leaderboard failed:', e);
     }
   }
-function renderLeaderboard(items){
-  if(!items || !items.length){
-    lbList.innerHTML = '<div class="muted" style="padding:10px">No scores yet.</div>';
-    return;
-  }
-  const rows = items.map((it,i)=>`
-    <tr>
-      <td class="col-rank">${i+1}</td>
-      <td>${escapeHtml(it.name||'anonymous')}</td>
-      <td class="col-score">${Number(it.score||0)}</td>
-    </tr>
-  `).join('');
-  lbList.innerHTML = `
-    <table class="lb-table">
-      <thead>
-        <tr>
-          <th class="col-rank">#</th>
-          <th>Name</th>
-          <th class="col-score">Score</th>
-        </tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>
-  `;
-}
 
-  // helpers
+  function renderLeaderboard(items){
+    if(!items || !items.length){
+      lbList.innerHTML = '<div class="muted" style="padding:10px">No scores yet.</div>';
+      return;
+    }
+    const rows = items.map((it,i)=>`
+      <tr>
+        <td>${i+1}</td>
+        <td>${escapeHtml(it.name||'anonymous')}</td>
+        <td>${Number(it.score||0)}</td>
+      </tr>
+    `).join('');
+    lbList.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Name</th>
+            <th>Score</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
   function draw(){
     ctx.clearRect(0,0,W,H);
     ctx.fillStyle='#1f4fd1';
@@ -471,6 +370,39 @@ function renderLeaderboard(items){
   }
   function dist(x1,y1,x2,y2){ const dx=x1-x2, dy=y1-y2; return Math.hypot(dx,dy); }
   function escapeHtml(s){ return (s+'').replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+
+  /* === Drag-to-scroll untuk slider karakter === */
+  const charRow = document.getElementById('charRow');
+  let isDown=false,startX=0,startLeft=0, dragged=false;
+
+  const onDown = (x)=>{ isDown=true; dragged=false; startX=x; startLeft=charRow.scrollLeft; };
+  const onMove = (x)=>{
+    if(!isDown) return;
+    const dx = x - startX;
+    if(Math.abs(dx)>5) dragged=true;
+    charRow.scrollLeft = startLeft - dx;
+  };
+  const onUp = ()=>{
+    isDown=false;
+    // cegah klik accidental saat dragging
+    if(dragged){
+      const radios = charRow.querySelectorAll('input[type="radio"]');
+      radios.forEach(r=>{
+        r.addEventListener('click', stopOnce, {once:true,capture:true});
+      });
+    }
+  };
+  const stopOnce = (e)=>{ e.stopPropagation(); e.preventDefault(); };
+
+  // mouse
+  charRow.addEventListener('mousedown',e=>onDown(e.pageX));
+  window.addEventListener('mousemove',e=>onMove(e.pageX));
+  window.addEventListener('mouseup',onUp);
+  // touch
+  charRow.addEventListener('touchstart',e=>onDown(e.touches[0].pageX),{passive:true});
+  charRow.addEventListener('touchmove',e=>onMove(e.touches[0].pageX),{passive:true});
+  charRow.addEventListener('touchend',onUp);
+
 })();
 </script>
 </body>
