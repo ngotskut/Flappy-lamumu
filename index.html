@@ -5,23 +5,6 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <title>Flappy Lamumu</title>
 <style>
-  /* --- UI tweaks requested --- */
-
-/* 1) Pusatkan semua teks di panel start */
-#startPanel{ text-align:center; }
-
-/* 2) Pusatkan isi kartu di grid */
-.row.grid-4{ justify-items:center; }
-
-/* 3) Sembunyikan caption "Lamumu #n" */
-.card .muted{ display:none; }
-
-/* 4) Sembunyikan tulisan "Use #n" tetapi tetap tampilkan radio-dot */
-.card div:last-child{ font-size:0; line-height:1; }
-.card div:last-child input[type="radio"]{
-  transform: scale(1.35);      /* biar titik pilihannya sedikit lebih besar */
-  vertical-align: middle;
-}
   :root{ --ui-bg:rgba(255,255,255,.96); --ui-radius:18px; --brand:#2563eb; }
   html,body{height:100%;margin:0}
   body{background:#6b8f99;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;overflow:hidden}
@@ -29,22 +12,30 @@
   #game{position:absolute;inset:0;display:block;background:linear-gradient(#cfefff,#bde6fd)}
   #score{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-weight:700;font-size:16px;pointer-events:none}
 
-  /* centered start menu */
+  /* overlay & start panel */
   #overlay{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:8}
   #startPanel{
     width:min(680px,92vw);background:var(--ui-bg);backdrop-filter:saturate(1.2) blur(8px);
-    border-radius:var(--ui-radius);box-shadow:0 20px 60px rgba(0,0,0,.35);padding:20px;z-index:9
+    border-radius:var(--ui-radius);box-shadow:0 20px 60px rgba(0,0,0,.35);padding:22px 20px;z-index:9;
+    text-align:center;
   }
-  #startPanel h2{margin:6px 0 10px;font-size:22px}
+  #startPanel h2{margin:6px 0 8px;font-size:22px}
   .muted{color:#4b5563;font-size:12px}
-  .row{display:grid;gap:10px}
-  .grid-4{grid-template-columns:repeat(4,1fr)}
-  .card{border:1px solid #e5e7eb;border-radius:12px;padding:10px;text-align:center;background:#fff}
-  .card img{width:72px;height:72px;object-fit:contain;display:block;margin:4px auto 6px}
-  .actions{display:flex;gap:10px;justify-content:center;margin-top:10px}
+  .row{display:grid;gap:12px}
+  .grid-4{grid-template-columns:repeat(4,1fr);justify-items:center}
+  .card{border:1px solid #e5e7eb;border-radius:12px;padding:10px 10px 12px;text-align:center;background:#fff;width:100%}
+  .card img{width:72px;height:72px;object-fit:contain;display:block;margin:4px auto 8px}
+  .card .muted{display:none}                 /* sembunyikan "Lamumu #n" */
+  .card div:last-child{font-size:0;line-height:1}
+  .card div:last-child input[type="radio"]{transform:scale(1.35);vertical-align:middle}
+
+  .actions{display:flex;gap:10px;justify-content:center;margin-top:12px}
   .btn{appearance:none;border:0;border-radius:999px;padding:10px 16px;font-weight:600;background:#e5e7eb;cursor:pointer}
   .btn.primary{background:var(--brand);color:#fff}
-  input[type="text"]{width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:10px;background:#fff}
+  .btn[disabled]{opacity:.45;cursor:not-allowed}
+  input[type="text"]{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;background:#fff;font-size:14px}
+  input[type="text"].invalid{border-color:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.15)}
+  #nameErr{display:none;color:#ef4444;font-size:12px;margin-top:6px}
 </style>
 </head>
 <body>
@@ -56,27 +47,33 @@
     <div id="startPanel">
       <h2>Flappy Lamumu 🐮</h2>
       <div class="muted">Tap / Click anywhere on the game to flap · Press <b>C</b> to switch character quickly</div>
-      <div style="margin:10px 0"><input id="playerName" type="text" placeholder="Enter your name (optional)"></div>
-      <div class="row grid-4">
+
+      <div style="margin:12px 0 6px">
+        <input id="playerName" type="text" placeholder="Enter your name (required for leaderboard)">
+        <div id="nameErr">Please enter at least 3 characters.</div>
+      </div>
+
+      <div class="row grid-4" style="margin-top:10px">
         <label class="card">
-          <img src="assets/lamumu1.png" alt="Lamumu #1"><div class="muted">Lamumu #1</div>
-          <div><input type="radio" name="char" value="0" checked> Use #1</div>
+          <img src="assets/lamumu1.png" alt="Lamumu 1">
+          <div><input type="radio" name="char" value="0" checked></div>
         </label>
         <label class="card">
-          <img src="assets/lamumu2.png" alt="Lamumu #2"><div class="muted">Lamumu #2</div>
-          <div><input type="radio" name="char" value="1"> Use #2</div>
+          <img src="assets/lamumu2.png" alt="Lamumu 2">
+          <div><input type="radio" name="char" value="1"></div>
         </label>
         <label class="card">
-          <img src="assets/lamumu3.png" alt="Lamumu #3"><div class="muted">Lamumu #3</div>
-          <div><input type="radio" name="char" value="2"> Use #3</div>
+          <img src="assets/lamumu3.png" alt="Lamumu 3">
+          <div><input type="radio" name="char" value="2"></div>
         </label>
         <label class="card">
-          <img src="assets/lamumu4.png" alt="Lamumu #4"><div class="muted">Lamumu #4</div>
-          <div><input type="radio" name="char" value="3"> Use #4</div>
+          <img src="assets/lamumu4.png" alt="Lamumu 4">
+          <div><input type="radio" name="char" value="3"></div>
         </label>
       </div>
+
       <div class="actions">
-        <button id="btnStart" class="btn primary">Start</button>
+        <button id="btnStart" class="btn primary" disabled>Start</button>
         <button id="btnLb" class="btn" type="button">Leaderboard (coming soon)</button>
       </div>
       <div class="muted" style="text-align:center;margin-top:6px">Tip: You can change character during play by pressing <b>C</b>.</div>
@@ -101,6 +98,24 @@
   const scoreEl = document.getElementById('score');
   const overlay = document.getElementById('overlay');
   const btnStart = document.getElementById('btnStart');
+  const nameInput = document.getElementById('playerName');
+  const nameErr = document.getElementById('nameErr');
+
+  // restore saved name
+  nameInput.value = localStorage.getItem('lamumu_name') || '';
+
+  // live validation for name
+  const MIN_NAME = 3;
+  function validateName(){
+    const ok = (nameInput.value.trim().length >= MIN_NAME);
+    btnStart.disabled = !ok;
+    nameInput.classList.toggle('invalid', !ok);
+    nameErr.style.display = ok ? 'none' : 'block';
+    return ok;
+  }
+  nameInput.addEventListener('input', validateName);
+  nameInput.addEventListener('blur', validateName);
+  validateName();
 
   // ---------- SIZE ----------
   let W=0,H=0,DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
@@ -118,10 +133,10 @@
     speedBase:190,
     speedMax:420,
     speed:190,
-    pipesPassed:0,       // <— hanya ini yang mempengaruhi speed
+    pipesPassed:0,       // hanya ini yang mempengaruhi speed
     speedPerPipe:2.2,    // naik pelan tiap pipa lolos
     gravity:900,
-    flapVel:-400,        // <— FLAP LEBIH TINGGI
+    flapVel:-400,        // flap lebih tinggi
     charIndex:0,
   };
 
@@ -160,8 +175,11 @@
   });
 
   // UI
-  btnStart.addEventListener('click',startGame);
+  btnStart.addEventListener('click',() => { if (validateName()) startGame(); });
   function startGame(){
+    // simpan nama untuk sesi berikutnya
+    localStorage.setItem('lamumu_name', nameInput.value.trim());
+
     const sel=document.querySelector('input[name="char"]:checked'); state.charIndex=sel?+sel.value:0;
     player.sprite=charImgs[state.charIndex];
     state.running=true; state.score=0; state.time=0; state.pipesPassed=0; state.speed=state.speedBase;
@@ -196,7 +214,7 @@
 
   function update(dt){
     state.time+=dt;
-    // speed hanya naik karena pipesPassed, bukan karena score
+    // speed hanya naik karena pipesPassed
     state.speed = Math.min(state.speedMax, state.speedBase + state.pipesPassed*state.speedPerPipe);
 
     if(needPipe()) spawnPipe();
@@ -239,7 +257,7 @@
     }
   }
 
-  function gameOver(){ state.running=false; overlay.style.display='flex'; }
+  function gameOver(){ state.running=false; overlay.style.display='flex'; validateName(); }
 
   // helpers
   function circleRect(cx,cy,cr, rx,ry,rw,rh){
