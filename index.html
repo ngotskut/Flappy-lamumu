@@ -23,7 +23,6 @@
   }
   #startPanel h2{margin:6px 0 8px;font-size:22px}
   .muted{color:#4b5563;font-size:12px}
-
   #charRow{display:flex;gap:12px;align-items:stretch;overflow-x:auto;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;padding-bottom:4px;margin-top:10px}
   #charRow::-webkit-scrollbar{height:0} #charRow{scrollbar-width:none}
   .card{flex:0 0 160px;border:1px solid #e5e7eb;border-radius:12px;padding:10px 10px 12px;text-align:center;background:#fff}
@@ -31,16 +30,13 @@
   #startPanel .card .muted{display:none!important}
   #startPanel .card div:last-child{font-size:0;line-height:1}
   #startPanel .card div:last-child input[type="radio"]{transform:scale(1.35);vertical-align:middle}
-
   .actions{display:flex;gap:10px;justify-content:center;margin-top:12px}
   .btn{appearance:none;border:0;border-radius:999px;padding:10px 16px;font-weight:600;background:#e5e7eb;cursor:pointer}
   .btn.primary{background:var(--brand);color:#fff}
   .btn[disabled]{opacity:.45;cursor:not-allowed}
-
   input[type="text"]{width:100%;max-width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;background:#fff;font-size:14px}
   input[type="text"].invalid{border-color:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.15)}
   #nameErr{display:none;color:#ef4444;font-size:12px;margin-top:6px}
-
   #lbPanel h3{font-size:16px}
   #lbList table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:14px}
   #lbList thead th,#lbList tbody td{padding:10px 14px;border-bottom:1px solid #eef2f7;vertical-align:middle;white-space:nowrap}
@@ -97,7 +93,6 @@ const overlay=document.getElementById('overlay');
 const btnStart=document.getElementById('btnStart');
 const nameInput=document.getElementById('playerName');
 const nameErr=document.getElementById('nameErr');
-
 const startPanel=document.getElementById('startPanel');
 const btnLb=document.getElementById('btnLb');
 const lbPanel=document.createElement('div');
@@ -119,15 +114,18 @@ nameInput.addEventListener('blur',validateName);
 validateName();
 
 let W=0,H=0,DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
+
+/* --- state pattern bata (di-hoist global) --- */
+let brickPattern = null;
+
 function resize(){
   W = innerWidth|0; H = innerHeight|0;
   canvas.width  = (W*DPR)|0; canvas.height = (H*DPR)|0;
   canvas.style.width = W+'px'; canvas.style.height = H+'px';
   ctx.setTransform(DPR,0,0,DPR,0,0);
-
-  // 👉 penting untuk tajam di layar HP/high-DPI
+  // reset supaya tajam setelah resize
   brickPattern = null;
- }
+}
 addEventListener('resize',resize,{passive:true}); resize();
 
 const state={running:false, score:0, time:0, speedBase:190, speedMax:420, speed:190, pipesPassed:0, speedPerPipe:2.2, gravity:900, flapVel:-400, charIndex:0};
@@ -226,31 +224,20 @@ function renderLeaderboard(items){
 }
 
 /* =================== DAY/NIGHT BACKGROUND =================== */
-/* durasi 1 fase (siang/sore/malam/subuh) */
 const PHASE_MS = 16000;
 const DAY_MS   = PHASE_MS * 4;
 const BG_PARALLAX = 0.15;
-/* mulai dari siang (noon) supaya langsung terang saat load */
-const START_AT_NOON = 0.50; // 0..1 posisi dalam 1 hari
+const START_AT_NOON = 0.50;
 
-/* palet fase (dipakai sebagai baseline; tint sunset/dawn ditambahkan terpisah) */
-const SKY_PHASE = [
-  { top:'#9fd6ff', bot:'#e6f4ff' }, // SIANG
-  { top:'#0a0f1e', bot:'#121a2c' }, // MALAM
-];
-/* tint tambahan saat dekat horizon */
- 
 let cloudOffset1=0, cloudOffset2=0;
 let dayClock     = START_AT_NOON * DAY_MS;
 let bgTLast      = performance.now();
 let brightness   = 1; // 0..1
 
-/* util warna */
 function hexToRgb(h){const p=n=>parseInt(n,16); return [p(h.slice(1,3)),p(h.slice(3,5)),p(h.slice(5,7))];}
 function mixColor(h1,h2,t){const [r1,g1,b1]=hexToRgb(h1),[r2,g2,b2]=hexToRgb(h2);const r=(r1+(r2-r1)*t)|0,g=(g1+(g2-g1)*t)|0,b=(b1+(b2-b1)*t)|0;return `rgb(${r},${g},${b})`;}
 function remapSmooth(x,a,b){return smooth01(clamp((x-a)/(b-a),0,1));}
 
-/* komponen langit */
 function drawSky(top,bottom){const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,top);g.addColorStop(1,bottom);ctx.fillStyle=g;ctx.fillRect(0,0,W,H);}
 function drawClouds(off1,off2,alpha){
   ctx.save(); ctx.globalAlpha = alpha;
@@ -270,7 +257,6 @@ function drawSun(x,y,a){
   ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,R*1.6,0,Math.PI*2); ctx.fill();
   ctx.restore();
 }
-/* bulan sabit natural dengan masking */
 function drawMoonCrescent(x,y,a,thin=0.62,tilt=-0.18){
   const R=Math.min(W,H)*0.06;
   ctx.save(); ctx.translate(x,y); ctx.rotate(tilt); ctx.globalAlpha=a;
@@ -284,7 +270,6 @@ function drawMoonCrescent(x,y,a,thin=0.62,tilt=-0.18){
   ctx.fillStyle=g; ctx.beginPath(); ctx.arc(-R*0.15,0,R*1.1,0,Math.PI*2); ctx.fill();
   ctx.restore();
 }
-/* bintang & lanskap */
 const STARS = Array.from({length:120},()=>({x:Math.random(), y:Math.random()*0.6, tw:0.6+Math.random()*0.5}));
 function drawStars(alpha){
   ctx.save(); ctx.fillStyle='#e8eefc';
@@ -319,70 +304,50 @@ function drawMountainsAndGrass(dt){
   ctx.restore();
 }
 
-// === S A T U - S A T U N Y A  renderBackground() ===
 function renderBackground(){
   const now = performance.now();
   const dt  = Math.min(0.05, (now - bgTLast) / 1000);
   bgTLast   = now;
   if (!window.__freeze) dayClock = (dayClock + dt * 1000) % DAY_MS;
 
-  // 0..1 dalam satu hari
   const prog = (dayClock % DAY_MS) / DAY_MS;
 
-  // Orbit elips — shift 0.25: 0.25=SUNRISE, 0.50=NOON, 0.75=SUNSET, 1/0=MIDNIGHT
+  // 0.25=SUNRISE, 0.50=NOON, 0.75=SUNSET
   const cx = W * 0.5,  cy = H * 0.62;
   const rx = W * 0.42, ry = H * 0.36;
   const angle = (prog - 0.25) * 2 * Math.PI;
   const sunX  = cx + Math.cos(angle) * rx;
   const sunY  = cy - Math.sin(angle) * ry;
 
-  // Elevasi → brightness
-  const rawElev   = (cy - sunY) / (H * 0.45); // >0 di atas horizon
+  const rawElev   = (cy - sunY) / (H * 0.45);
   const elevNorm  = clamp(rawElev, 0, 1);
   const daylight  = smooth01(elevNorm);
   const sunriseBoost = remapSmooth(rawElev, -0.12, 0.06) * 0.25;
   brightness = clamp(daylight * 0.92 + sunriseBoost + 0.06, 0, 1);
 
-  // Palet dasar: malam ↔ siang
   const nightTop = '#0a0f1e', nightBot = '#121a2c';
   const dayTop   = '#9fd6ff', dayBot   = '#eef4ff';
   let skyTop = mixColor(nightTop, dayTop, brightness);
   let skyBot = mixColor(nightBot, dayBot, brightness);
 
-  // ===== Gate jingga (sunset) & biru (dawn) — versi v6 =====
-  // Intensitas maksimum dekat horizon; “above” untuk matahari di atas, “below” di bawah
+  // Tint sunset/dawn (boleh kamu tweak lagi nanti)
   const nearH   = clamp(1 - Math.abs(rawElev) / 0.30, 0, 1);
   const above   = clamp(rawElev,  0, 1);
   const below   = clamp(-rawElev, 0, 1);
-  // Sunset: saat rawElev mendekati 0 dari atas horizon → 1
   const sunsetMix = nearH * smooth01(1 - clamp(above / 0.22, 0, 1));
-  // Dawn:   saat rawElev mendekati 0 dari bawah horizon → 1
   const dawnMix   = nearH * smooth01(1 - clamp(below / 0.22, 0, 1));
-
-  // Tinta
   const SUNSET = { top:'#ff9b5e', bot:'#ffd39a' };
   const DAWN   = { top:'#244b9a', bot:'#3e74c9' };
-
-  if (sunsetMix > 0) {
-    const k = Math.min(1, sunsetMix * 1.25);
-    skyTop = mixColor(skyTop, SUNSET.top, k);
-    skyBot = mixColor(skyBot, SUNSET.bot, k);
-  }
-  if (dawnMix > 0) {
-    const k = Math.min(1, dawnMix * 1.00);
-    skyTop = mixColor(skyTop, DAWN.top, k);
-    skyBot = mixColor(skyBot, DAWN.bot, k);
-  }
+  if (sunsetMix > 0){ const k=Math.min(1,sunsetMix*1.25); skyTop=mixColor(skyTop,SUNSET.top,k); skyBot=mixColor(skyBot,SUNSET.bot,k); }
+  if (dawnMix   > 0){ const k=Math.min(1,dawnMix*1.00);   skyTop=mixColor(skyTop,DAWN.top,k);   skyBot=mixColor(skyBot,DAWN.bot,k);   }
 
   drawSky(skyTop, skyBot);
 
-  // Bintang & awan
   const starAlpha = 1 - remapSmooth(rawElev, -0.10, 0.02);
   if (starAlpha > 0.02) drawStars(starAlpha);
   const cloudA = 0.20 + 0.75 * brightness;
   drawClouds(cloudOffset1, cloudOffset2, cloudA);
 
-  // Matahari / Bulan
   const sunA  = remapSmooth(rawElev,  0.02, 0.14);
   const moonA = 1 - remapSmooth(rawElev, -0.06, 0.10);
   if (sunA  > 0.01) drawSun(sunX, sunY, sunA);
@@ -392,58 +357,48 @@ function renderBackground(){
     drawMoonCrescent(moonX, moonY, moonA, 0.56, -0.18);
   }
 
-  // Landscape
   drawMountainsAndGrass(dt);
 
-  // Kontras skor
   scoreEl.style.color = (brightness < 0.55) ? '#fff' : '#0b1222';
   scoreEl.style.textShadow = (brightness < 0.55)
     ? '0 1px 2px rgba(0,0,0,.6)'
     : '0 1px 2px rgba(255,255,255,.25)';
+} // ← penting: renderBackground ditutup di sini
 
 /* === PIPE: Brick pattern & renderer ===================================== */
 const PIPE_BRICK = {
-  brick:       '#c04d35',   // warna bata utama
-  brickShadow: '#9f3b29',   // sisi gelap bata
-  mortar:      '#e9e4df'    // semen
+  brick:       '#c04d35',
+  brickShadow: '#9f3b29',
+  mortar:      '#e9e4df'
 };
 
-let brickPattern = null;
 function makeBrickPattern(scale = 1){
-  const tileW = 24*scale, tileH = 12*scale;     // ukuran satu bata
-  const gap   = 2*scale;                         // tebal semen
+  const tileW = 24*scale, tileH = 12*scale;
+  const gap   = 2*scale;
   const oc = document.createElement('canvas');
-  // 2×2 bata dalam satu tile supaya jahitan mulus saat repeat
   oc.width  = tileW*2;
   oc.height = tileH*2;
   const c = oc.getContext('2d');
 
-  // semen
   c.fillStyle = PIPE_BRICK.mortar;
   c.fillRect(0,0,oc.width,oc.height);
 
-  // fungsi gambar satu bata dengan gradient halus
   const brick = (x,y,w,h)=>{
     const g = c.createLinearGradient(x, y, x, y+h);
     g.addColorStop(0, PIPE_BRICK.brick);
     g.addColorStop(1, PIPE_BRICK.brickShadow);
     c.fillStyle = g;
     c.fillRect(x, y, w, h);
-    // highlight tipis atas
     c.fillStyle = 'rgba(255,255,255,.06)';
     c.fillRect(x, y, w, 1*scale);
   };
 
   const bw = tileW-gap, bh = tileH-gap;
+  brick(0,0,bw,bh);
+  brick(tileW+gap,0,bw,bh);
+  brick(tileW/2,tileH+gap,bw,bh);
+  brick(tileW*1.5+gap,tileH+gap,bw,bh);
 
-  // baris 1 (tanpa offset)
-  brick(0,            0,             bw, bh);
-  brick(tileW+gap,    0,             bw, bh);
-  // baris 2 (offset setengah bata)
-  brick(tileW/2,      tileH+gap,     bw, bh);
-  brick(tileW*1.5+gap,tileH+gap,     bw, bh);
-
-  // garis semen tipis supaya tekstur “muncul”
   c.fillStyle = 'rgba(0,0,0,.05)';
   for(let x=0;x<=oc.width;x+=tileW)  c.fillRect(x,0,1,oc.height);
   for(let y=0;y<=oc.height;y+=tileH) c.fillRect(0,y,oc.width,1);
@@ -451,20 +406,14 @@ function makeBrickPattern(scale = 1){
   return c.createPattern(oc,'repeat');
 }
 
-// gambar satu segmen pipa bata (top atau bottom)
 function drawBrickPipe(x,y,w,h){
   if(h<=0) return;
   if(!brickPattern){
-    // skala pattern biar tajam di layar high-DPI
     const s = Math.max(1, Math.round((window.devicePixelRatio||1)));
     brickPattern = makeBrickPattern(s);
   }
-
   ctx.save();
-
-  // isi bata
   if (brickPattern.setTransform){
-    // kunci pola ke posisi pipa (biar tekstur “ikut” bergerak)
     const m = new DOMMatrix();
     m.e = -x; m.f = -y;
     brickPattern.setTransform(m);
@@ -472,7 +421,6 @@ function drawBrickPipe(x,y,w,h){
   ctx.fillStyle = brickPattern;
   ctx.fillRect(x,y,w,h);
 
-  // rim & shading pinggir biar 3D
   const edge = ctx.createLinearGradient(x,y,x+w,y);
   edge.addColorStop(0,'rgba(0,0,0,.28)');
   edge.addColorStop(0.10,'rgba(0,0,0,0)');
@@ -480,31 +428,30 @@ function drawBrickPipe(x,y,w,h){
   edge.addColorStop(1,'rgba(0,0,0,.28)');
   ctx.fillStyle = edge; ctx.fillRect(x,y,w,h);
 
-  // dimming mengikuti terang-langit (variabel global `brightness` sudah ada)
   const dim = 0.45 * (1 - (typeof brightness==='number'?brightness:1));
   if (dim>0){
     ctx.fillStyle = `rgba(0,0,0,${dim.toFixed(3)})`;
     ctx.fillRect(x,y,w,h);
   }
-
-  // garis tepi
   ctx.lineWidth = 2;
   ctx.strokeStyle = 'rgba(0,0,0,.35)';
   ctx.strokeRect(x+0.5,y+0.5,w-1,h-1);
-
   ctx.restore();
 }
- 
+
+// untuk debug cepat di Console
+window.drawBrickPipe = drawBrickPipe;
+
 /* ====================== DRAW ====================== */
 function draw(){
   ctx.clearRect(0,0,W,H);
   renderBackground();
 
-  // PIPES (bata)
-for(const p of pipes){
-  drawBrickPipe(p.x, 0,           p.width, p.y);
-  drawBrickPipe(p.x, p.y+p.gap,   p.width, H-(p.y+p.gap));
-}
+  // PIPES: pakai bata
+  for(const p of pipes){
+    drawBrickPipe(p.x, 0,           p.width, p.y);
+    drawBrickPipe(p.x, p.y+p.gap,   p.width, H-(p.y+p.gap));
+  }
 
   // BONUS
   for(const b of bonuses){
@@ -554,7 +501,7 @@ if(bgm){
   window.addEventListener('keydown',unlockBgm,{once:true,passive:true});
 }
 
-/* ====== DEBUG HOOKS (opsional, lewat DevTools Console) ====== */
+/* ====== DEBUG HOOKS (opsional) ====== */
 window.clockFreeze = on => { window.__freeze = !!on; };
 window.setNoon     = ()=>{ dayClock = 0.50 * DAY_MS; };
 window.setSunset   = ()=>{ dayClock = 0.75 * DAY_MS; };
