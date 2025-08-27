@@ -345,22 +345,31 @@ function renderBackground(){
 
   brightness = clamp(daylight * 0.86 + twilightLift * 0.22 + sunriseBoost * 0.12, 0, 1);
 
-  // LANGIT: blend malam → siang (basis), lalu tint dawn/sunset di horizon
-  const nightTop='#0a0f1e', nightBot='#121a2c';
-  const dayTop  ='#9fd6ff', dayBot  ='#e6f4ff';
+  // ===== LANGIT: base malam→siang, lalu overlay sunset/dawn yang kuat =====
+  const nightTop = '#0a0f1e', nightBot = '#121a2c';
+  const dayTop   = '#9fd6ff', dayBot   = '#e6f4ff';
+
+  // base dari brightness (malam → siang)
   let skyTop = mixColor(nightTop, dayTop, brightness);
   let skyBot = mixColor(nightBot, dayBot, brightness);
 
-  // tint horizon (baru): maksimum tepat di horizon
-  const nearH = clamp(1 - Math.abs(rawElev) / 0.28, 0, 1);
-  const warmT = nearH * clamp(rawElev * 3.2, 0, 1) * 0.90;  // sunset
-  const dawnT = nearH * clamp(-rawElev * 3.2, 0, 1) * 0.95; // subuh
-  skyTop = mixColor(skyTop, DUSK_TINT.top, warmT);
-  skyBot = mixColor(skyBot, DUSK_TINT.bot, warmT);
-  skyTop = mixColor(skyTop, DAWN_TINT.top, dawnT);
-  skyBot = mixColor(skyBot, DAWN_TINT.bot, dawnT);
+  // --- overlay sunset/dawn (lebih kuat dari tint sebelumnya) ---
+  // kedekatan ke horizon (maks di horizon)
+  const nearH = clamp(1 - Math.abs(rawElev) / 0.30, 0, 1);
 
-  drawSky(skyTop, skyBot);
+  // seberapa "sunset" (matahari sedikit di atas horizon) & "dawn" (sedikit di bawah)
+  const sunsetMix = clamp(1 - (rawElev / 0.22), 0, 1) * nearH;   // 0..1 (puncak di rawElev≈+0)
+  const dawnMix   = clamp(1 - ((-rawElev) / 0.25), 0, 1) * nearH; // 0..1 (puncak di rawElev≈-0)
+
+  // target palet kuat untuk sunset & dawn
+  const SUNSET = { top: '#ff9b5e', bot: '#ffd39a' }; // oranye hangat
+  const DAWN   = { top: '#244b9a', bot: '#3e74c9' }; // biru subuh
+
+  // blend ke palet target (lebih dominan)
+  skyTop = mixColor(skyTop, SUNSET.top, sunsetMix);
+  skyBot = mixColor(skyBot, SUNSET.bot, sunsetMix);
+  skyTop = mixColor(skyTop, DAWN.top,   dawnMix);
+  skyBot = mixColor(skyBot, DAWN.bot,   dawnMix);
 
   // bintang & awan
   const starAlpha = Math.max(0, 1 - Math.pow(brightness, 1.3));
