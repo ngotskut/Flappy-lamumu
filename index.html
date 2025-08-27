@@ -115,15 +115,22 @@ validateName();
 
 let W=0,H=0,DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
 
-/* --- state pattern bata (di-hoist global) --- */
-let brickPattern = null;
+// ganti const → let dan inisialisasi kosong
+let PIPE = { width:0, gapBase:0, spawnMin:0, spawnMax:0 };
 
 function resize(){
   W = innerWidth|0; H = innerHeight|0;
   canvas.width  = (W*DPR)|0; canvas.height = (H*DPR)|0;
   canvas.style.width = W+'px'; canvas.style.height = H+'px';
   ctx.setTransform(DPR,0,0,DPR,0,0);
-  // reset supaya tajam setelah resize
+
+  // hitung ulang ukuran pipa sesuai W/H terbaru
+  PIPE.width    = Math.max(80,(W*0.08)|0);
+  PIPE.gapBase  = Math.max(160,(H*0.28)|0);
+  PIPE.spawnMin = Math.max(240,(W*0.36)|0);
+  PIPE.spawnMax = Math.max(280,(W*0.42)|0);
+
+  // refresh pattern biar tetap tajam
   brickPattern = null;
 }
 addEventListener('resize',resize,{passive:true}); resize();
