@@ -368,8 +368,8 @@ brightness = clamp(daylight * 0.92 + sunriseBoost + 0.06, 0, 1);
   drawClouds(cloudOffset1, cloudOffset2, cloudA);
 
   // ===== MATAHARI / BULAN =====
-  const sunAlpha  = remapSmooth(rawElev, 0.02, 0.14);
-  const moonAlpha = 1 - remapSmooth(rawElev, -0.06, 0.10);
+  const sunAlpha  = remapSmooth(rawElev,   0.00, 0.12);
+const moonAlpha = remapSmooth(-rawElev,  0.00, 0.12);
 
   if (sunAlpha > 0.01) drawSun(sunX, sunY, sunAlpha);
   if (moonAlpha > 0.01){
