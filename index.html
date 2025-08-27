@@ -353,26 +353,33 @@ function renderBackground(){
   let skyTop = mixColor(nightTop, dayTop, brightness);
   let skyBot = mixColor(nightBot, dayBot, brightness);
 
-  // --- overlay sunset/dawn yang benar (dengan gating) ---
-const nearH = clamp(1 - Math.abs(rawElev) / 0.30, 0, 1);  // kuat di dekat horizon
+  // ==== SUNSET/DAWN overlay yg benar (gated) ====
+const nearH = clamp(1 - Math.abs(rawElev) / 0.30, 0, 1); // kuat di sekitar horizon
 
-// komponen ketinggian ter-gated
-const above = clamp(rawElev, 0, 1);   // 0..1 hanya saat di atas horizon
-const below = clamp(-rawElev, 0, 1);  // 0..1 hanya saat di bawah horizon
+// aktifkan hanya salah satu:
+const above = clamp(rawElev,   0, 1); // >0 saat matahari di ATAS horizon
+const below = clamp(-rawElev,  0, 1); // >0 saat matahari di BAWAH horizon
 
-// seberapa kuat campuran; 0.20–0.22 = radius "efek" dari horizon
-const sunsetMix = nearH * smooth01(1 - clamp(above / 0.20, 0, 1)); // 1 di horizon, 0 pas agak tinggi
-const dawnMix   = nearH * smooth01(1 - clamp(below / 0.22, 0, 1)); // 1 di horizon, 0 pas agak rendah
+// 0..1, puncak tepat di horizon
+const sunsetMix = nearH * smooth01(1 - clamp(above / 0.22, 0, 1));
+const dawnMix   = nearH * smooth01(1 - clamp(below / 0.22, 0, 1));
 
-// palet target
+// palet overlay
 const SUNSET = { top:'#ff9b5e', bot:'#ffd39a' }; // jingga hangat
 const DAWN   = { top:'#244b9a', bot:'#3e74c9' }; // biru subuh
 
-// campurkan ke langit dasar
-skyTop = mixColor(skyTop, SUNSET.top, sunsetMix);
-skyBot = mixColor(skyBot, SUNSET.bot, sunsetMix);
-skyTop = mixColor(skyTop, DAWN.top,   dawnMix);
-skyBot = mixColor(skyBot, DAWN.bot,   dawnMix);
+// kalau ingin lebih “membara”, naikkan strength 1.15–1.30
+const SUNSET_STRENGTH = 1.20;
+const DAWN_STRENGTH   = 1.00;
+
+// campurkan ke langit dasar (skyTop/skyBot sudah dibentuk dari night<->day via brightness)
+skyTop = mixColor(skyTop, SUNSET.top, clamp(sunsetMix * SUNSET_STRENGTH, 0, 1));
+skyBot = mixColor(skyBot, SUNSET.bot, clamp(sunsetMix * SUNSET_STRENGTH, 0, 1));
+skyTop = mixColor(skyTop, DAWN.top,   clamp(dawnMix   * DAWN_STRENGTH,   0, 1));
+skyBot = mixColor(skyBot, DAWN.bot,   clamp(dawnMix   * DAWN_STRENGTH,   0, 1));
+
+// (opsional) debug agar kelihatan di console
+window.__sky = { rawElev, brightness, sunsetMix, dawnMix };
 
   // bintang & awan
   const starAlpha = Math.max(0, 1 - Math.pow(brightness, 1.3));
