@@ -319,76 +319,78 @@ function drawStars(alpha){
 function renderBackground(){
   // waktu siklus
   const now = performance.now();
-  const dt  = Math.min(0.05,(now-bgTLast)/1000);
+  const dt  = Math.min(0.05, (now - bgTLast) / 1000);
   bgTLast   = now;
-  if (!window.__freeze) dayClock = (dayClock + dt*1000) % DAY_MS;
+  if (!window.__freeze) {                    // opsional: kalau pakai hook freeze
+    dayClock = (dayClock + dt * 1000) % DAY_MS;
+  }
 
-  // progress 0..1
+  // progress 0..1 dlm satu hari
   const prog = (dayClock % DAY_MS) / DAY_MS;
 
-  // orbit elips
-  const cx=W*0.5, cy=H*0.62;
-  const rx=W*0.42, ry=H*0.36;
-  const angle = (prog*2*Math.PI) - Math.PI/2;
-  const sunX  = cx + Math.cos(angle)*rx;
-  const sunY  = cy - Math.sin(angle)*ry;
+  // ===== ORBIT ELLIPSE (sinkron dengan siang/sore/malam/subuh) =====
+  // shift 0.25 ⇒ 0.25=SUNRISE, 0.50=NOON, 0.75=SUNSET, 0/1=MIDNIGHT
+  const cx = W * 0.5, cy = H * 0.62;
+  const rx = W * 0.42, ry = H * 0.36;
+  const angle = (prog - 0.25) * 2 * Math.PI;
+  const sunX  = cx + Math.cos(angle) * rx;
+  const sunY  = cy - Math.sin(angle) * ry;
 
-  // --- ketinggian matahari ---
-  const rawElev   = (cy - sunY)/(H*0.45);       // <0 = di bawah horizon, >0 = di atas
-  const elevNorm  = clamp(rawElev, 0, 1);       // 0..1 hanya saat di atas
-  const daylight  = smooth01(elevNorm);         // easing
-  const sunriseBoost = remapSmooth(rawElev, -0.14, 0.08) * 0.40; // bantu subuh cepat terang
+  // ===== KETINGGIAN MATAHARI → BRIGHTNESS =====
+  const rawElev   = (cy - sunY) / (H * 0.45);     // <0: di bawah horizon; >0: di atas
+  const elevNorm  = clamp(rawElev, 0, 1);
+  const daylight  = smooth01(elevNorm);
+  const sunriseBoost = remapSmooth(rawElev, -0.20, 0.05) * 0.50; // bantu subuh cepat terang
   brightness = clamp(daylight + sunriseBoost, 0, 1);
 
-  // --- warna langit murni dari brightness ---
+  // ===== LANGIT: malam → siang, lalu tint dawn/sunset dekat horizon =====
   const nightTop='#0a0f1e', nightBot='#121a2c';
   const dayTop  ='#74c8ff', dayBot  ='#c9ecff';
   let skyTop = mixColor(nightTop, dayTop, brightness);
   let skyBot = mixColor(nightBot, dayBot, brightness);
 
-  // tint horizon: hangat saat sunset, biru saat subuh
-  const horizonProx = clamp(1 - Math.abs((cy - sunY)/(H*0.16)), 0, 1);
-  const warmT = horizonProx * clamp(rawElev,  0, 1) * 0.65;  // sore
-  const dawnT = horizonProx * clamp(-rawElev, 0, 1) * 0.85;  // subuh
+  const horizonProx = clamp(1 - Math.abs((cy - sunY) / (H * 0.16)), 0, 1);
+  const warmT = horizonProx * clamp(rawElev,  0, 1) * 0.65;  // sunset
+  const dawnT = horizonProx * clamp(-rawElev, 0, 1) * 0.85;  // dawn
   skyTop = mixColor(skyTop, DUSK_TINT.top, warmT);
   skyBot = mixColor(skyBot, DUSK_TINT.bot, warmT);
   skyTop = mixColor(skyTop, DAWN_TINT.top, dawnT);
   skyBot = mixColor(skyBot, DAWN_TINT.bot, dawnT);
 
-  // gambar langit
- skyTop = mixColor('#0a0f1e', '#74c8ff', brightness);
-skyBot = mixColor('#121a2c', '#c9ecff', brightness);
   drawSky(skyTop, skyBot);
 
-  // bintang: padam cepat saat matahari naik
+  // ===== BINTANG, AWAN =====
   const starAlpha = 1 - remapSmooth(rawElev, -0.10, 0.02);
-  if (starAlpha>0.02) drawStars(starAlpha);
+  if (starAlpha > 0.02) drawStars(starAlpha);
 
-  // awan lebih tebal saat terang
-  const cloudA = 0.20 + 0.75*brightness;
+  const cloudA = 0.20 + 0.75 * brightness;
   drawClouds(cloudOffset1, cloudOffset2, cloudA);
 
-  // matahari / bulan (cross-fade)
+  // ===== MATAHARI / BULAN =====
   const sunAlpha  = remapSmooth(rawElev, 0.02, 0.14);
   const moonAlpha = 1 - remapSmooth(rawElev, -0.06, 0.10);
-  if (sunAlpha>0.01)  drawSun(sunX, sunY, sunAlpha);
-  if (moonAlpha>0.01){
-    const moonX = cx + Math.cos(angle+Math.PI)*rx;
-    const moonY = cy - Math.sin(angle+Math.PI)*ry;
+
+  if (sunAlpha > 0.01) drawSun(sunX, sunY, sunAlpha);
+  if (moonAlpha > 0.01){
+    const moonX = cx + Math.cos(angle + Math.PI) * rx;
+    const moonY = cy - Math.sin(angle + Math.PI) * ry;
     drawMoonCrescent(moonX, moonY, moonAlpha, 0.62, -0.18);
   }
 
-  // landscape mengikuti brightness
+  // ===== LANDSCAPE & HUD =====
   drawMountainsAndGrass(dt);
 
-  // kontras skor
   scoreEl.style.color = (brightness < 0.55) ? '#fff' : '#0b1222';
   scoreEl.style.textShadow = (brightness < 0.55)
     ? '0 1px 2px rgba(0,0,0,.6)'
     : '0 1px 2px rgba(255,255,255,.25)';
 
-  // (opsional) update monitor debug jika ada
-  if (window.__sky){ window.__sky.rawElev = rawElev; window.__sky.brightness = brightness; }
+  // (opsional) monitor debug
+  if (window.__sky){
+    window.__sky.rawElev    = rawElev;
+    window.__sky.brightness = brightness;
+    window.__sky.prog       = prog;
+  }
 }
  
 /* ================== OBSTACLES & GAMEPLAY ================== */
