@@ -4,7 +4,6 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <title>Flappy Lamumu</title>
-<script defer src="/_vercel/insights/script.js"></script>
 <style>
   /* penting agar input tidak melebar keluar panel */
   *,*::before,*::after{ box-sizing:border-box }
@@ -32,12 +31,11 @@
     overflow-x:auto; -webkit-overflow-scrolling:touch; scroll-behavior:smooth;
     padding-bottom:4px; margin-top:10px;
   }
-  /* sembunyikan scrollbar agar bersih */
   #charRow::-webkit-scrollbar{height:0}
   #charRow{scrollbar-width:none}
 
   .card{
-    flex:0 0 160px; /* lebar kartu tetap agar mudah di-swipe */
+    flex:0 0 160px;
     border:1px solid #e5e7eb;border-radius:12px;padding:10px 10px 12px;
     text-align:center;background:#fff
   }
@@ -64,7 +62,7 @@
   #lbList table{
     width:100%;
     border-collapse:collapse;
-    table-layout:fixed;                 /* kunci layout kolom */
+    table-layout:fixed;
     font-size:14px;
   }
   #lbList thead th,
@@ -74,17 +72,14 @@
     vertical-align:middle;
     white-space:nowrap;
   }
-  /* Kolom rank (#) */
   #lbList thead th:nth-child(1),
   #lbList tbody td:nth-child(1){
     width:52px;text-align:center;
   }
-  /* Kolom Name */
   #lbList thead th:nth-child(2),
   #lbList tbody td:nth-child(2){
     width:auto;text-align:left;
   }
-  /* Kolom Score */
   #lbList thead th:nth-child(3),
   #lbList tbody td:nth-child(3){
     width:96px;text-align:right;
@@ -136,16 +131,11 @@
       <div class="muted" style="text-align:center;margin-top:6px">Tip: You can change character during play by pressing <b>C</b>.</div>
     </div>
   </div>
-
-  <!-- === Audio elements (tambahan) === -->
-  <audio id="bgm" src="assets/sweet-country-farm-music-full-354815.mp3" loop preload="auto"></audio>
-  <audio id="moo" src="assets/cow-moo-390282.mp3" preload="auto"></audio>
 </div>
 
 <script>
 (() => {
-  /* ====== BAGIAN GAME & LEADERBOARD DARI VERSIMU (tetap) ====== */
-
+  /* ====== ASSETS ====== */
   const CHAR_SRCS = [
     'assets/lamumu1.png',
     'assets/lamumu2.png',
@@ -154,6 +144,20 @@
   ];
   const BONUS_SRC = 'assets/bonus.png';
 
+  /* ====== BACKGROUND (empat waktu, opsional gambar — tidak dipakai di mode prosedural) ====== */
+  const BG_SRCS = [
+    'assets/bg_morning.jpg',
+    'assets/bg_day.jpg',
+    'assets/bg_dusk.jpg',
+    'assets/bg_night.jpg'
+  ];
+  const bgImgs = BG_SRCS.map(src => { const im=new Image(); im.src=src; return im; });
+
+  let currentBgIndex = 0;
+  const bgPatterns = [];
+  const pipePatterns = [];
+
+  /* ====== DOM ====== */
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
   const scoreEl = document.getElementById('score');
@@ -162,7 +166,7 @@
   const nameInput = document.getElementById('playerName');
   const nameErr = document.getElementById('nameErr');
 
-  // buat panel leaderboard
+  // leaderboard panel
   const startPanel = document.getElementById('startPanel');
   const btnLb = document.getElementById('btnLb');
   const lbPanel = document.createElement('div');
@@ -245,7 +249,7 @@
     overlay.style.display='none';
   }
 
-  const rand=(a,b)=>a+Math.random()*(b-a);
+  const rand=(a,b)=>a+Math.random()*(b-a));
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   function needPipe(){ if(!pipes.length) return true; const last=pipes[pipes.length-1]; return (W-last.x) >= rand(PIPE.spawnMin,PIPE.spawnMax); }
   function spawnPipe(){
@@ -268,6 +272,9 @@
   requestAnimationFrame(loop);
 
   function update(dt){
+    // [ADD PROC BG] simpan dt untuk animasi bg
+    lastDt = dt;
+
     state.time+=dt;
     state.speed = Math.min(state.speedMax, state.speedBase + state.pipesPassed*state.speedPerPipe);
 
@@ -293,6 +300,10 @@
       if(b.x < -80) bonuses.splice(i,1);
     }
 
+    // [ADD PROC BG] parallax awan (bergerak pelan ikut speed)
+    cloudOffset1 = (cloudOffset1 + state.speed * BG_PARALLAX * 0.50 * dt) % W;
+    cloudOffset2 = (cloudOffset2 + state.speed * BG_PARALLAX * 0.25 * dt) % W;
+
     scoreEl.textContent='Score: '+state.score;
   }
 
@@ -300,19 +311,11 @@
     state.running=false;
     overlay.style.display='flex';
     validateName();
-
-    // === SFX moo saat game over (tambahan) ===
-    try { 
-      const moo = document.getElementById('moo');
-      moo.currentTime = 0; 
-      await moo.play(); 
-    } catch(_) {}
-
     try{ await saveScore((nameInput.value||'').trim(), state.score); }catch(e){ console.warn(e); }
     openLeaderboard();
   }
 
-  // ====== SAVE SCORE & LEADERBOARD ======
+  /* ====== SAVE SCORE & LEADERBOARD ====== */
   async function saveScore(name, score){
     if(!name || name.length<3) return;
     await fetch('/api/leaderboard/submit', {
@@ -363,31 +366,208 @@
     `;
   }
 
+  /* ====== [ADD PROC BG] PROSEDURAL BACKGROUND ====== */
+  const USE_PROCEDURAL_BG = true;     // aktifkan mode tanpa gambar
+  const BG_CYCLE_MS = 60000;          // 60 dtk per fase
+  const BG_FADE_MS  = 1500;           // crossfade halus
+  const BG_PARALLAX = 0.15;           // kecepatan awan relatif
+  let lastDt = 1/60;
+  let bgFadeMsLeft = 0;
+  let bgNextIndex  = 0;
+  let cloudOffset1 = 0, cloudOffset2 = 0;
+
+  const phases = [
+    { name:'morning', sky:['#FFEDD5','#FDE68A'], sunY:0.35, moon:false, stars:0 },
+    { name:'day',     sky:['#BEE3F8','#90CDF4'], sunY:0.22, moon:false, stars:0 },
+    { name:'dusk',    sky:['#FECACA','#FBCFE8'], sunY:0.45, moon:false, stars:20 },
+    { name:'night',   sky:['#0F172A','#1E293B'], sunY:0.80, moon:true,  stars:80 },
+  ];
+  const STARS = Array.from({length:120}, () => ({
+    x: Math.random(),
+    y: Math.random()*0.6,
+    tw: 0.5 + Math.random()*0.5
+  }));
+
+  setInterval(() => {
+    bgNextIndex  = (currentBgIndex + 1) % phases.length;
+    bgFadeMsLeft = BG_FADE_MS;
+  }, BG_CYCLE_MS);
+
+  function lerp(a,b,t){ return a+(b-a)*t; }
+  function lerpColor(c1,c2,t){
+    const p = n => parseInt(n,16);
+    const [r1,g1,b1] = [p(c1.slice(1,3)),p(c1.slice(3,5)),p(c1.slice(5,7))];
+    const [r2,g2,b2] = [p(c2.slice(1,3)),p(c2.slice(3,5)),p(c2.slice(5,7))];
+    const r = (r1+(r2-r1)*t)|0, g=(g1+(g2-g1)*t)|0, b=(b1+(b2-b1)*t)|0;
+    return `rgb(${r},${g},${b})`;
+  }
+  function drawGradientSky(topColor, bottomColor){
+    const g = ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0, topColor);
+    g.addColorStop(1, bottomColor);
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
+  }
+  function drawSun(xNorm, yNorm, alpha=1){
+    const R = Math.min(W,H)*0.08;
+    ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = '#FFD166';
+    ctx.beginPath(); ctx.arc(xNorm*W, yNorm*H, R, 0, Math.PI*2); ctx.fill(); ctx.restore();
+  }
+  function drawMoon(xNorm, yNorm, alpha=1){
+    const R = Math.min(W,H)*0.06;
+    ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = '#E2E8F0';
+    ctx.beginPath(); ctx.arc(xNorm*W, yNorm*H, R, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = alpha*0.25; ctx.fillStyle = '#94A3B8';
+    for(let i=0;i<5;i++){
+      const r = R*(0.1+Math.random()*0.18), a = Math.random()*Math.PI*2, rr = R*0.55;
+      const cx = xNorm*W + Math.cos(a)*rr, cy = yNorm*H + Math.sin(a)*rr;
+      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  }
+  function drawStars(alpha=1){
+    ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = '#E5E7EB';
+    for(const s of STARS){
+      const tw = 0.6 + Math.sin(performance.now()/400 * s.tw)*0.4;
+      ctx.globalAlpha = alpha*tw;
+      ctx.fillRect(s.x*W, s.y*H, 2, 2);
+    }
+    ctx.restore();
+  }
+  function drawClouds(offset1, offset2, alpha=1){
+    ctx.save(); ctx.globalAlpha = alpha;
+    const baseY1 = H*0.18, baseY2 = H*0.28;
+    const cloud = (x,y,s) => {
+      ctx.beginPath(); ctx.fillStyle='rgba(255,255,255,0.85)';
+      ctx.arc(x, y, s, 0, Math.PI*2);
+      ctx.arc(x+s*0.8, y+ s*0.2, s*0.9, 0, Math.PI*2);
+      ctx.arc(x-s*0.7, y+ s*0.25, s*0.75, 0, Math.PI*2);
+      ctx.fill();
+    };
+    for(let i=-1;i<=4;i++){ // layer 1 cepat
+      const x = ((i*0.35*W) + (offset1%W));
+      cloud(x, baseY1, Math.min(W,H)*0.07);
+    }
+    ctx.globalAlpha = alpha*0.8;     // layer 2 lambat
+    for(let i=-1;i<=4;i++){
+      const x = ((i*0.5*W) + (offset2%W));
+      cloud(x, baseY2, Math.min(W,H)*0.055);
+    }
+    ctx.restore();
+  }
+
+  /* ====== DRAW ====== */
   function draw(){
     ctx.clearRect(0,0,W,H);
-    ctx.fillStyle='#1f4fd1';
-    for(const p of pipes){ ctx.fillRect(p.x,0,p.width,p.y); ctx.fillRect(p.x,p.y+p.gap,p.width,H-(p.y+p.gap)); }
+
+    // ===== PROSEDURAL BG (tanpa gambar) =====
+    if (USE_PROCEDURAL_BG){
+      let tFade = 0;
+      if (bgFadeMsLeft > 0){
+        tFade = 1 - (bgFadeMsLeft / BG_FADE_MS);
+        bgFadeMsLeft = Math.max(0, bgFadeMsLeft - lastDt*1000);
+      }
+      const cur = phases[currentBgIndex];
+      const nxt = phases[(currentBgIndex + (tFade>0 ? 1 : 0)) % phases.length];
+
+      // langit (crossfade warna)
+      const skyTop = tFade ? lerpColor(cur.sky[0], nxt.sky[0], tFade) : cur.sky[0];
+      const skyBot = tFade ? lerpColor(cur.sky[1], nxt.sky[1], tFade) : cur.sky[1];
+      drawGradientSky(skyTop, skyBot);
+
+      // posisi X benda langit ping-pong 0..1..0
+      const dayX = ( (performance.now()/1000) * 0.03 ) % 2;
+      const xNorm = dayX>1 ? 2-dayX : dayX;
+      const yNorm = tFade ? lerp(cur.sunY, nxt.sunY, tFade) : cur.sunY;
+
+      // bintang
+      const showStars = (cur.stars>0 || (tFade && nxt.stars>0));
+      if (showStars){
+        const aCur = cur.stars>0 ? (tFade? (1-tFade) : 1) : 0;
+        const aNxt = nxt.stars>0 ? tFade : 0;
+        if (aCur>0) drawStars(aCur);
+        if (aNxt>0) drawStars(aNxt);
+      }
+
+      // matahari/bulan crossfade
+      const curMoon = cur.moon ? (tFade? (1-tFade):1) : 0;
+      const nxtMoon = nxt.moon ? tFade : 0;
+      const curSun  = !cur.moon ? (tFade? (1-tFade):1) : 0;
+      const nxtSun  = !nxt.moon ? tFade : 0;
+      if (curSun>0) drawSun(xNorm, yNorm, curSun);
+      if (nxtSun>0) drawSun(xNorm, yNorm, nxtSun);
+      if (curMoon>0) drawMoon(1-xNorm, yNorm, curMoon);
+      if (nxtMoon>0) drawMoon(1-xNorm, yNorm, nxtMoon);
+
+      // awan parallax
+      drawClouds(cloudOffset1, cloudOffset2, 1);
+
+      // kunci fase baru setelah fade selesai
+      if (tFade===0 && bgFadeMsLeft===0 && bgNextIndex!==0 && currentBgIndex!==bgNextIndex){
+        currentBgIndex = bgNextIndex;
+      }
+    } else {
+      // fallback gambar lama (kalau mau pakai)
+      const bg = bgImgs[currentBgIndex];
+      if (bg && bg.complete){
+        const iw = bg.naturalWidth, ih = bg.naturalHeight;
+        const scale = Math.max(W/iw, H/ih);
+        const dw = iw*scale, dh = ih*scale;
+        const dx = (W - dw)/2, dy = (H - dh)/2;
+        ctx.drawImage(bg, dx, dy, dw, dh);
+      } else {
+        const g = ctx.createLinearGradient(0,0,0,H);
+        g.addColorStop(0,'#cfefff'); g.addColorStop(1,'#bde6fd');
+        ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+      }
+    }
+
+    // Pipes (pakai pattern jika ada; jika tidak, solid)
+    ctx.save();
+    const pat = pipePatterns[currentBgIndex];
+    ctx.fillStyle = pat ? pat : '#8c4a2d';
+    for(const p of pipes){
+      fillRoundRect(p.x,0,p.width,p.y,10);
+      fillRoundRect(p.x,p.y+p.gap,p.width,H-(p.y+p.gap),10);
+    }
+    ctx.restore();
+
+    // Bonus
     for(const b of bonuses){
       ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(b.angle);
       const s=b.size; if(bonusImg.complete) ctx.drawImage(bonusImg,-s/2,-s/2,s,s);
       else { ctx.fillStyle='#ff3b3b'; ctx.beginPath(); ctx.arc(0,0,s/2,0,Math.PI*2); ctx.fill(); }
       ctx.restore();
     }
+
+    // Player
     if(state.running && player.sprite && player.sprite.complete){
       const s = player.r*2.2*1.15; ctx.drawImage(player.sprite, player.x-s/2, player.y-s/2, s, s);
     }
   }
+
+  /* ====== HELPERS ====== */
   function circleRect(cx,cy,cr, rx,ry,rw,rh){
     const tx=Math.max(rx,Math.min(cx,rx+rw)), ty=Math.max(ry,Math.min(cy,ry+rh));
     const dx=cx-tx, dy=cy-ty; return dx*dx+dy*dy <= cr*cr;
   }
   function dist(x1,y1,x2,y2){ const dx=x1-x2, dy=y1-y2; return Math.hypot(dx,dy); }
   function escapeHtml(s){ return (s+'').replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+  function fillRoundRect(x,y,w,h,r){
+    const rr=Math.min(r, Math.abs(w)/2, Math.abs(h)/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr,y);
+    ctx.arcTo(x+w,y, x+w,y+h, rr);
+    ctx.arcTo(x+w,y+h, x, y+h, rr);
+    ctx.arcTo(x, y+h, x, y, rr);
+    ctx.arcTo(x, y, x+w, y, rr);
+    ctx.closePath();
+    ctx.fill();
+  }
 
-  /* === Drag-to-scroll untuk slider karakter === */
+  /* === Drag-to-scroll karakter === */
   const charRow = document.getElementById('charRow');
   let isDown=false,startX=0,startLeft=0, dragged=false;
-
   const onDown = (x)=>{ isDown=true; dragged=false; startX=x; startLeft=charRow.scrollLeft; };
   const onMove = (x)=>{
     if(!isDown) return;
@@ -397,39 +577,19 @@
   };
   const onUp = ()=>{
     isDown=false;
-    // cegah klik accidental saat dragging
     if(dragged){
       const radios = charRow.querySelectorAll('input[type="radio"]');
       radios.forEach(r=>{
-        r.addEventListener('click', stopOnce, {once:true,capture:true});
+        r.addEventListener('click', e=>{ e.stopPropagation(); e.preventDefault(); }, {once:true,capture:true});
       });
     }
   };
-  const stopOnce = (e)=>{ e.stopPropagation(); e.preventDefault(); };
-
-  // mouse
   charRow.addEventListener('mousedown',e=>onDown(e.pageX));
   window.addEventListener('mousemove',e=>onMove(e.pageX));
   window.addEventListener('mouseup',onUp);
-  // touch
   charRow.addEventListener('touchstart',e=>onDown(e.touches[0].pageX),{passive:true});
   charRow.addEventListener('touchmove',e=>onMove(e.touches[0].pageX),{passive:true});
   charRow.addEventListener('touchend',onUp);
-
-  /* === Mulai BGM setelah interaksi pertama (autoplay policy) === */
-  const bgm = document.getElementById('bgm');
-  if(bgm){
-    bgm.volume = 0.35;
-    let started = false;
-    function unlockBgm(){
-      if(!started){
-        bgm.play().then(()=>{ started = true; }).catch(()=>{});
-      }
-    }
-    window.addEventListener('touchstart', unlockBgm, { once:true, passive:true });
-    window.addEventListener('mousedown',   unlockBgm, { once:true, passive:true });
-    window.addEventListener('keydown',     unlockBgm, { once:true, passive:true });
-  }
 
 })();
 </script>
