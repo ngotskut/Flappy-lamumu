@@ -321,9 +321,10 @@ function renderBackground(){
   bgTLast   = now;
   if (!window.__freeze) dayClock = (dayClock + dt * 1000) % DAY_MS;
 
+  // 0..1 dalam satu hari
   const prog = (dayClock % DAY_MS) / DAY_MS;
 
-  // Orbit elips (0.25=SUNRISE, 0.50=NOON, 0.75=SUNSET, 1/0=MIDNIGHT)
+  // Orbit elips — shift 0.25: 0.25=SUNRISE, 0.50=NOON, 0.75=SUNSET, 1/0=MIDNIGHT
   const cx = W * 0.5,  cy = H * 0.62;
   const rx = W * 0.42, ry = H * 0.36;
   const angle = (prog - 0.25) * 2 * Math.PI;
@@ -331,45 +332,52 @@ function renderBackground(){
   const sunY  = cy - Math.sin(angle) * ry;
 
   // Elevasi → brightness
-  const rawElev   = (cy - sunY) / (H * 0.45);
+  const rawElev   = (cy - sunY) / (H * 0.45); // >0 di atas horizon
   const elevNorm  = clamp(rawElev, 0, 1);
   const daylight  = smooth01(elevNorm);
   const sunriseBoost = remapSmooth(rawElev, -0.12, 0.06) * 0.25;
   brightness = clamp(daylight * 0.92 + sunriseBoost + 0.06, 0, 1);
 
-  // Langit dasar siang ↔ malam
+  // Palet dasar: malam ↔ siang
   const nightTop = '#0a0f1e', nightBot = '#121a2c';
   const dayTop   = '#9fd6ff', dayBot   = '#eef4ff';
   let skyTop = mixColor(nightTop, dayTop, brightness);
   let skyBot = mixColor(nightBot, dayBot, brightness);
 
-  // Gate warna: jingga (sunset) & biru (dawn)
-  const nearH     = clamp(1 - Math.abs(rawElev) / 0.30, 0, 1);
-  const above     = clamp(rawElev,  0, 1);
-  const below     = clamp(-rawElev, 0, 1);
-  const sunsetMix = nearH * smooth01(1 - clamp(above / 0.22, 0, 1)); // 1 saat terbenam
-  const dawnMix   = nearH * smooth01(1 - clamp(below / 0.22, 0, 1)); // 1 saat terbit
+  // ===== Gate jingga (sunset) & biru (dawn) — versi v6 =====
+  // Intensitas maksimum dekat horizon; “above” untuk matahari di atas, “below” di bawah
+  const nearH   = clamp(1 - Math.abs(rawElev) / 0.30, 0, 1);
+  const above   = clamp(rawElev,  0, 1);
+  const below   = clamp(-rawElev, 0, 1);
+  // Sunset: saat rawElev mendekati 0 dari atas horizon → 1
+  const sunsetMix = nearH * smooth01(1 - clamp(above / 0.22, 0, 1));
+  // Dawn:   saat rawElev mendekati 0 dari bawah horizon → 1
+  const dawnMix   = nearH * smooth01(1 - clamp(below / 0.22, 0, 1));
 
+  // Tinta
   const SUNSET = { top:'#ff9b5e', bot:'#ffd39a' };
   const DAWN   = { top:'#244b9a', bot:'#3e74c9' };
 
-  if (sunsetMix > 0){
-    skyTop = mixColor(skyTop, SUNSET.top, Math.min(1, sunsetMix * 1.25));
-    skyBot = mixColor(skyBot, SUNSET.bot, Math.min(1, sunsetMix * 1.25));
+  if (sunsetMix > 0) {
+    const k = Math.min(1, sunsetMix * 1.25);
+    skyTop = mixColor(skyTop, SUNSET.top, k);
+    skyBot = mixColor(skyBot, SUNSET.bot, k);
   }
-  if (dawnMix > 0){
-    skyTop = mixColor(skyTop, DAWN.top, Math.min(1, dawnMix * 1.00));
-    skyBot = mixColor(skyBot, DAWN.bot, Math.min(1, dawnMix * 1.00));
+  if (dawnMix > 0) {
+    const k = Math.min(1, dawnMix * 1.00);
+    skyTop = mixColor(skyTop, DAWN.top, k);
+    skyBot = mixColor(skyBot, DAWN.bot, k);
   }
 
   drawSky(skyTop, skyBot);
 
+  // Bintang & awan
   const starAlpha = 1 - remapSmooth(rawElev, -0.10, 0.02);
   if (starAlpha > 0.02) drawStars(starAlpha);
-
   const cloudA = 0.20 + 0.75 * brightness;
   drawClouds(cloudOffset1, cloudOffset2, cloudA);
 
+  // Matahari / Bulan
   const sunA  = remapSmooth(rawElev,  0.02, 0.14);
   const moonA = 1 - remapSmooth(rawElev, -0.06, 0.10);
   if (sunA  > 0.01) drawSun(sunX, sunY, sunA);
@@ -379,17 +387,28 @@ function renderBackground(){
     drawMoonCrescent(moonX, moonY, moonA, 0.56, -0.18);
   }
 
+  // Landscape
   drawMountainsAndGrass(dt);
 
+  // Kontras skor
   scoreEl.style.color = (brightness < 0.55) ? '#fff' : '#0b1222';
   scoreEl.style.textShadow = (brightness < 0.55)
     ? '0 1px 2px rgba(0,0,0,.6)'
     : '0 1px 2px rgba(255,255,255,.25)';
 
-  // TANDA versi & data debug (wajib ada)
+  // ====== DEBUG OVERLAY + tanda versi (jangan hapus dulu) ======
   window.__sky   = { rawElev, brightness, sunsetMix, dawnMix, prog, dayClock };
-  window.__bgVer = 'sunset-gate-v5';
+  window.__bgVer = 'sunset-gate-v6';
+  ctx.save();
+  ctx.font = '12px system-ui, -apple-system, Segoe UI, Roboto, Arial';
+  ctx.fillStyle = 'rgba(255,255,255,.8)';
+  ctx.fillText(
+    `v6  s=${sunsetMix.toFixed(2)}  d=${dawnMix.toFixed(2)}  br=${brightness.toFixed(2)}  re=${rawElev.toFixed(2)}`,
+    8, 16
+  );
+  ctx.restore();
 }
+ 
 /* ====================== DRAW ====================== */
 function draw(){
   ctx.clearRect(0,0,W,H);
