@@ -272,7 +272,7 @@
 
     scoreEl.textContent='Score: '+state.score;
 
-    /* ===== [ADD PROC BG] parallax awan ===== */
+    /* ===== parallax awan (untuk procedural BG) ===== */
     lastDt = dt;
     cloudOffset1 = (cloudOffset1 + state.speed * BG_PARALLAX * 0.50 * dt) % W;
     cloudOffset2 = (cloudOffset2 + state.speed * BG_PARALLAX * 0.25 * dt) % W;
@@ -334,9 +334,9 @@
       </table>`;
   }
 
-  /* =================== [ADD PROC BG] =================== */
+  /* =================== Procedural Background (tetap) =================== */
   const USE_PROCEDURAL_BG = true;
-  const BG_CYCLE_MS = 60000;
+  const BG_CYCLE_MS = 10000;
   const BG_FADE_MS  = 1500;
   const BG_PARALLAX = 0.15;
 
@@ -421,6 +421,74 @@
     ctx.restore();
   }
 
+  /* =================== BRICK PIPES (baru) =================== */
+
+  // buat pola bata sekali (tanpa gambar eksternal)
+  let brickPattern = null;
+  function createBrickPattern(){
+    const oc = document.createElement('canvas');
+    const mortar = 3;          // ketebalan nat
+    const brickW = 36;         // lebar 1 bata
+    const brickH = 18;         // tinggi 1 bata
+    oc.width  = brickW*2;      // dua kolom utk offset baris
+    oc.height = brickH;
+    const o = oc.getContext('2d');
+
+    // dasar bata
+    o.fillStyle = '#8B5A3C';           // coklat bata
+    o.fillRect(0,0,oc.width,oc.height);
+
+    // sedikit gradasi / noise halus
+    const grd = o.createLinearGradient(0,0,0,oc.height);
+    grd.addColorStop(0,'rgba(255,255,255,0.06)');
+    grd.addColorStop(1,'rgba(0,0,0,0.08)');
+    o.fillStyle = grd;
+    o.fillRect(0,0,oc.width,oc.height);
+
+    // garis nat (horizontal)
+    o.fillStyle = '#E7DED7';
+    o.fillRect(0, brickH-mortar, oc.width, mortar);
+
+    // garis nat (vertikal) – kolom 1
+    o.fillRect(brickW-mortar, 0, mortar, brickH);
+    // kolom 2 (offset setengah bata)
+    o.fillRect(oc.width-mortar, 0, mortar, brickH);
+
+    brickPattern = ctx.createPattern(oc, 'repeat');
+  }
+  createBrickPattern();
+
+  function roundRectPath(x,y,w,h,r=10){
+    const rr = Math.min(r, Math.abs(w)/2, Math.abs(h)/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr, y);
+    ctx.arcTo(x+w, y, x+w, y+h, rr);
+    ctx.arcTo(x+w, y+h, x, y+h, rr);
+    ctx.arcTo(x, y+h, x, y, rr);
+    ctx.arcTo(x, y, x+w, y, rr);
+    ctx.closePath();
+  }
+
+  function fillBrickRect(x,y,w,h){
+    if (w<=0 || h<=0) return;
+    ctx.save();
+    roundRectPath(x,y,w,h,10);
+    ctx.clip();
+
+    // isi bata
+    ctx.fillStyle = brickPattern || '#8B5A3C';
+    ctx.fillRect(x,y,w,h);
+
+    // tebal border agar pipa terlihat menonjol
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(0,0,0,0.25)';
+    roundRectPath(x,y,w,h,10);
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  /* =================== DRAW =================== */
   function draw(){
     ctx.clearRect(0,0,W,H);
 
@@ -467,11 +535,10 @@
       }
     }
 
-    // pipes
-    ctx.fillStyle='#1f4fd1';
+    /* ===== Pipes => brick ===== */
     for(const p of pipes){
-      ctx.fillRect(p.x,0,p.width,p.y);
-      ctx.fillRect(p.x,p.y+p.gap,p.width,H-(p.y+p.gap));
+      fillBrickRect(p.x, 0, p.width, p.y);
+      fillBrickRect(p.x, p.y + p.gap, p.width, H - (p.y + p.gap));
     }
 
     // bonuses
@@ -493,9 +560,9 @@
         ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.stroke();
       }
     }
-  }  /* <-- ini penutup draw() yang hilang tadi */
+  } /* end draw */
 
-  /* ======= HELPERS (global) ======= */
+  /* ======= HELPERS ======= */
   function circleRect(cx,cy,cr, rx,ry,rw,rh){
     const tx=Math.max(rx,Math.min(cx,rx+rw)), ty=Math.max(ry,Math.min(cy,ry+rh));
     const dx=cx-tx, dy=cy-ty; return dx*dx+dy*dy <= cr*cr;
