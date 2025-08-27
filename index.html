@@ -301,11 +301,11 @@ function drawStars(alpha){
   ctx.restore();
 }
 
-// === STEP 1: FIX LANGIT BERDASARKAN ELEVASI MATAHARI ===
+// === SATU-SATUNYA renderBackground() (tempel menimpa yang ada) ===
 function renderBackground(){
   // waktu siklus
   const now = performance.now();
-  const dt  = Math.min(0.05,(now-bgTLast)/1000); 
+  const dt  = Math.min(0.05,(now-bgTLast)/1000);
   bgTLast   = now;
   dayClock  = (dayClock + dt*1000) % DAY_MS;
 
@@ -319,56 +319,42 @@ function renderBackground(){
   const sunX  = cx + Math.cos(angle)*rx;
   const sunY  = cy - Math.sin(angle)*ry;
 
-  // --- ketinggian matahari (boleh negatif saat di bawah horizon) ---
-  const rawElev  = (cy - sunY)/(H*0.45);        // ~-∞..+∞
-  const elevNorm = clamp(rawElev, 0, 1);        // 0..1 (di atas horizon)
-  const daylight = smooth01(elevNorm);          // easing
+  // --- ketinggian matahari ---
+  const rawElev   = (cy - sunY)/(H*0.45);       // <0 = di bawah horizon, >0 = di atas
+  const elevNorm  = clamp(rawElev, 0, 1);       // 0..1 hanya saat di atas
+  const daylight  = smooth01(elevNorm);         // easing
+  const sunriseBoost = remapSmooth(rawElev, -0.14, 0.08) * 0.40; // bantu subuh cepat terang
+  brightness = clamp(daylight + sunriseBoost, 0, 1);
 
-  // dorong terang saat subuh supaya tidak gelap terlalu lama
-  const sunriseBoost = remapSmooth(rawElev, -0.14, 0.08) * 0.40;
-  brightness = clamp(daylight + sunriseBoost, 0, 1);   // 0..1 → dipakai landscape & HUD
-
-  // --- warna langit: blend langsung dari malam → siang berdasarkan brightness ---
-  const nightTop = '#0a0f1e', nightBot = '#121a2c';
-  const dayTop   = '#74c8ff', dayBot   = '#c9ecff';
-
-  // base gradien (tanpa tint)
+  // --- warna langit murni dari brightness ---
+  const nightTop='#0a0f1e', nightBot='#121a2c';
+  const dayTop  ='#74c8ff', dayBot  ='#c9ecff';
   let skyTop = mixColor(nightTop, dayTop, brightness);
   let skyBot = mixColor(nightBot, dayBot, brightness);
 
-  // tint horizon: hangat saat sore (sun di atas horizon dekat garis), biru saat subuh (sun di bawah horizon dekat garis)
+  // tint horizon: hangat saat sunset, biru saat subuh
   const horizonProx = clamp(1 - Math.abs((cy - sunY)/(H*0.16)), 0, 1);
-  const warmT = horizonProx * clamp(rawElev,  0, 1) * 0.65;  // sunset/sore
-  const dawnT = horizonProx * clamp(-rawElev, 0, 1) * 0.85;  // dawn/subuh
-  const DUSK_TINT = { top:'#ffb07a', bot:'#ffd7a1' };
-  const DAWN_TINT = { top:'#244b9a', bot:'#3e74c9' };
-
+  const warmT = horizonProx * clamp(rawElev,  0, 1) * 0.65;  // sore
+  const dawnT = horizonProx * clamp(-rawElev, 0, 1) * 0.85;  // subuh
   skyTop = mixColor(skyTop, DUSK_TINT.top, warmT);
   skyBot = mixColor(skyBot, DUSK_TINT.bot, warmT);
   skyTop = mixColor(skyTop, DAWN_TINT.top, dawnT);
   skyBot = mixColor(skyBot, DAWN_TINT.bot, dawnT);
 
   // gambar langit
-  const g = ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0, skyTop);
-  g.addColorStop(1, skyBot);
-  ctx.fillStyle = g;
-  ctx.fillRect(0,0,W,H);
+  drawSky(skyTop, skyBot);
 
-  // === elemen lain tetap bergantung ke elevasi/brightness ===
-
-  // bintang padam cepat saat matahari naik
+  // bintang: padam cepat saat matahari naik
   const starAlpha = 1 - remapSmooth(rawElev, -0.10, 0.02);
-  if (starAlpha > 0.02) drawStars(starAlpha);
+  if (starAlpha>0.02) drawStars(starAlpha);
 
-  // awan menebal saat terang
+  // awan lebih tebal saat terang
   const cloudA = 0.20 + 0.75*brightness;
   drawClouds(cloudOffset1, cloudOffset2, cloudA);
 
-  // matahari/bulan cross-fade
+  // matahari / bulan (cross-fade)
   const sunAlpha  = remapSmooth(rawElev, 0.02, 0.14);
   const moonAlpha = 1 - remapSmooth(rawElev, -0.06, 0.10);
-
   if (sunAlpha>0.01)  drawSun(sunX, sunY, sunAlpha);
   if (moonAlpha>0.01){
     const moonX = cx + Math.cos(angle+Math.PI)*rx;
@@ -376,7 +362,7 @@ function renderBackground(){
     drawMoonCrescent(moonX, moonY, moonAlpha, 0.62, -0.18);
   }
 
-  // pegunungan & rumput mengikuti brightness
+  // landscape mengikuti brightness
   drawMountainsAndGrass(dt);
 
   // kontras skor
@@ -384,8 +370,11 @@ function renderBackground(){
   scoreEl.style.textShadow = (brightness < 0.55)
     ? '0 1px 2px rgba(0,0,0,.6)'
     : '0 1px 2px rgba(255,255,255,.25)';
-}
 
+  // (opsional) update monitor debug jika ada
+  if (window.__sky){ window.__sky.rawElev = rawElev; window.__sky.brightness = brightness; }
+}
+ 
 /* ================== OBSTACLES & GAMEPLAY ================== */
 const PIPE={width:Math.max(80,(W*0.08)|0), gapBase:Math.max(160,(H*0.28)|0), spawnMin:Math.max(240,(W*0.36)|0), spawnMax:Math.max(280,(W*0.42)|0)};
 const BONUS={ sizeBase: Math.max(34,(Math.min(W,H)*0.1)|0), rotateSpeed:2.0, chance:0.65, yOffset:20 };
