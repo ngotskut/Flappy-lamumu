@@ -320,45 +320,39 @@ function drawMountainsAndGrass(dt){
 
 // === S A T U - S A T U N Y A  renderBackground() ===
 function renderBackground(){
-  // waktu siklus
   const now = performance.now();
   const dt  = Math.min(0.05, (now - bgTLast) / 1000);
   bgTLast   = now;
   if (!window.__freeze) dayClock = (dayClock + dt * 1000) % DAY_MS;
 
-  // progress 0..1 dalam satu hari
   const prog = (dayClock % DAY_MS) / DAY_MS;
 
-  // ===== ORBIT ELLIPSE (0.25=sunrise, 0.50=noon, 0.75=sunset, 0/1=midnight)
   const cx = W * 0.5,  cy = H * 0.62;
   const rx = W * 0.42, ry = H * 0.36;
   const angle = (prog - 0.25) * 2 * Math.PI;
   const sunX  = cx + Math.cos(angle) * rx;
   const sunY  = cy - Math.sin(angle) * ry;
 
-  // ===== KETINGGIAN MATAHARI → BRIGHTNESS (0..1)
-  const rawElev   = (cy - sunY) / (H * 0.45);          // >0 di atas horizon
+  const rawElev   = (cy - sunY) / (H * 0.45);
   const elevNorm  = clamp(rawElev, 0, 1);
   const daylight  = smooth01(elevNorm);
   const sunriseBoost = remapSmooth(rawElev, -0.12, 0.06) * 0.25;
   brightness = clamp(daylight * 0.92 + sunriseBoost + 0.06, 0, 1);
 
-  // ===== LANGIT DASAR: night → day via brightness
   const nightTop = '#0a0f1e', nightBot = '#121a2c';
   const dayTop   = '#9fd6ff', dayBot   = '#eef4ff';
   let skyTop = mixColor(nightTop, dayTop, brightness);
   let skyBot = mixColor(nightBot, dayBot, brightness);
 
-  // ===== OVERLAY SUNSET / DAWN (dipicu dekat horizon & tidak saling campur)
-  const nearH     = clamp(1 - Math.abs(rawElev) / 0.30, 0, 1); // kuat di horizon
-  const above     = clamp(rawElev,  0, 1);  // >0 kalau matahari di atas
-  const below     = clamp(-rawElev, 0, 1);  // >0 kalau di bawah
+  const nearH     = clamp(1 - Math.abs(rawElev) / 0.30, 0, 1);
+  const above     = clamp(rawElev,  0, 1);
+  const below     = clamp(-rawElev, 0, 1);
   const sunsetMix = nearH * smooth01(1 - clamp(above / 0.22, 0, 1));
   const dawnMix   = nearH * smooth01(1 - clamp(below / 0.22, 0, 1));
 
   const SUNSET = { top:'#ff9b5e', bot:'#ffd39a' };
   const DAWN   = { top:'#244b9a', bot:'#3e74c9' };
-  const SUNSET_STRENGTH = 2.0;   // naikan ke 1.30–1.40 kalau mau lebih jingga
+  const SUNSET_STRENGTH = 1.25;
   const DAWN_STRENGTH   = 1.00;
 
   if (sunsetMix > 0) {
@@ -370,10 +364,8 @@ function renderBackground(){
     skyBot = mixColor(skyBot, DAWN.bot, Math.min(1, dawnMix * DAWN_STRENGTH));
   }
 
-  // gambar langit
   drawSky(skyTop, skyBot);
 
-  // ===== BINTANG, AWAN, MATAHARI/BULAN, LANDSCAPE (pakai brightness)
   const starAlpha = 1 - remapSmooth(rawElev, -0.10, 0.02);
   if (starAlpha > 0.02) drawStars(starAlpha);
 
@@ -391,14 +383,15 @@ function renderBackground(){
 
   drawMountainsAndGrass(dt);
 
-  // kontras skor
   scoreEl.style.color = (brightness < 0.55) ? '#fff' : '#0b1222';
   scoreEl.style.textShadow = (brightness < 0.55)
     ? '0 1px 2px rgba(0,0,0,.6)'
     : '0 1px 2px rgba(255,255,255,.25)';
 
-  // debug: supaya bisa dilihat dari Console
+  // DEBUG: harus terlihat di Console
   window.__sky = { rawElev, brightness, sunsetMix, dawnMix, prog, dayClock };
+  window.__bgVer = 'sunset-gate-v5';
+}
 }
   // bintang & awan
   const starAlpha = Math.max(0, 1 - Math.pow(brightness, 1.3));
