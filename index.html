@@ -336,7 +336,7 @@ function drawClouds(off1,off2,alpha){
   ctx.restore();
 }
 
-/* matahari (bulat + glow seperti gambar 2) */
+/* matahari (bulat + glow seperti contoh) */
 function drawSun(x,y,a){
   const R=Math.min(W,H)*0.085;
   ctx.save(); ctx.globalAlpha=a;
@@ -366,10 +366,8 @@ function drawCrescentMoon(x,y,a,angle){
   const biteY = y - Math.sin(angle)*off*0.8;
   ctx.beginPath(); ctx.arc(biteX, biteY, R, 0, Math.PI*2); ctx.fill();
 
-  // kembali normal
+  // kembali normal + glow lembut
   ctx.globalCompositeOperation='source-over';
-
-  // glow lembut
   const g=ctx.createRadialGradient(x,y,R*0.5, x,y,R*1.2);
   g.addColorStop(0,'rgba(242,246,255,0.4)');
   g.addColorStop(1,'rgba(242,246,255,0)');
@@ -378,17 +376,26 @@ function drawCrescentMoon(x,y,a,angle){
   ctx.restore();
 }
 
-/* pegunungan & rumput — bentuk lebih tegas */
+/* pegunungan & rumput — campur malam→siang (bukan kebalikannya) */
 let ridgeOff1=0, ridgeOff2=0, grassOff=0;
 function drawMountainsAndGrass(dt){
   ridgeOff1 += dt*12; ridgeOff2 += dt*6; grassOff += dt*20;
 
-  // pegunungan jauh (kontras biru tua)
+  // palet malam & siang
+  const farNightTop='#0b1329', farNightBot='#091125';
+  const farDayTop ='#365b8f', farDayBot ='#25406e';
+
+  const nearNightTop='#0d1f20', nearNightBot='#0b1a1b';
+  const nearDayTop ='#3c8c74', nearDayBot ='#226652';
+
+  const grassNightTop='#176927', grassNightBot='#0f471a';
+  const grassDayTop  ='#82e255', grassDayBot  ='#49be3e';
+
+  // pegunungan jauh
   ctx.save();
-  const farTop = mixColor('#1a2b48','#0b1329', 1-dayness);
-  const farBot = mixColor('#172a45','#091125', 1-dayness);
   let g=ctx.createLinearGradient(0,H*0.6,0,H*0.9);
-  g.addColorStop(0, farTop); g.addColorStop(1, farBot);
+  g.addColorStop(0, mixColor(farNightTop, farDayTop, dayness));
+  g.addColorStop(1, mixColor(farNightBot, farDayBot, dayness));
   ctx.fillStyle = g;
   ctx.beginPath();
   ctx.moveTo(0,H*0.72);
@@ -398,11 +405,10 @@ function drawMountainsAndGrass(dt){
   }
   ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath(); ctx.fill();
 
-  // bukit dekat (hijau kebiruan)
-  const nearTop = mixColor('#2f6b5a','#173336', 1-dayness);
-  const nearBot = mixColor('#275a4e','#13292b', 1-dayness);
+  // bukit dekat
   g=ctx.createLinearGradient(0,H*0.72,0,H);
-  g.addColorStop(0, nearTop); g.addColorStop(1, nearBot);
+  g.addColorStop(0, mixColor(nearNightTop, nearDayTop, dayness));
+  g.addColorStop(1, mixColor(nearNightBot, nearDayBot, dayness));
   ctx.fillStyle = g;
   ctx.beginPath();
   ctx.moveTo(0,H*0.80);
@@ -412,16 +418,16 @@ function drawMountainsAndGrass(dt){
   }
   ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath(); ctx.fill();
 
-  // kabut tipis di horizon agar lapisan jelas
+  // sedikit kabut (hanya malam/ senja agar layer jelas)
   const fog=ctx.createLinearGradient(0,H*0.78,0,H*0.86);
-  fog.addColorStop(0, `rgba(255,255,255,${0.08*(0.7-dayness)})`);
+  fog.addColorStop(0, `rgba(255,255,255,${0.10*(1-dayness)})`);
   fog.addColorStop(1, 'rgba(255,255,255,0)');
   ctx.fillStyle=fog; ctx.fillRect(0,H*0.76,W,H*0.12);
 
-  // padang rumput (hijau terang)
+  // padang rumput
   g=ctx.createLinearGradient(0,H*0.86,0,H);
-  g.addColorStop(0, mixColor('#84e352','#2f9b34', 1-dayness));
-  g.addColorStop(1, mixColor('#49be3e','#176927', 1-dayness));
+  g.addColorStop(0, mixColor(grassNightTop, grassDayTop, dayness));
+  g.addColorStop(1, mixColor(grassNightBot, grassDayBot, dayness));
   ctx.fillStyle=g;
   ctx.beginPath();
   ctx.moveTo(0,H*0.885);
@@ -462,23 +468,23 @@ function renderBackground(){
 
   // progress & orbit
   const prog = dayClock / DAY_MS;                 // 0..1
-  const angle = prog*2*Math.PI - Math.PI/2;       // sunrise di kiri
+  const angle = prog*2*Math.PI - Math.PI/2;       // sunrise kiri
   const sinEl = Math.sin(angle);                  // -1: tengah malam, 0: horizon, 1: siang puncak
   const cx=W*0.5, cy=H*0.62, rx=W*0.42, ry=H*0.36;
   const sunX = cx + Math.cos(angle)*rx;
   const sunY = cy - sinEl*ry;
 
-  // terang siang langsung dari sinEl -> super stabil
-  const dayRaw = (sinEl + 1) * 0.5;               // 0..1
-  dayness = smooth01(dayRaw);                     // easing
+  // terang siang langsung dari sinEl (mapping agresif agar cepat terang begitu naik)
+  const dayRaw = clamp((sinEl + 0.10) / 0.90, 0, 1); // sedikit buffer di bawah horizon
+  dayness = smooth01(dayRaw);
 
   // twilight hangat dekat horizon (sunrise/sunset)
   const twilight = clamp(1 - Math.abs(sinEl)/0.55, 0, 1);
 
   // palet langit
-  const nightTop='#07122a', nightBot='#0e1a33';   // malam
-  const dayTop  ='#8fd1ff', dayBot  ='#dff4ff';   // siang biru cerah
-  const duskTop ='#ffb175', duskBot ='#ffd6a6';   // senja hangat
+  const nightTop='#07122a', nightBot='#0e1a33';
+  const dayTop  ='#9ad4ff', dayBot  ='#e7f6ff';
+  const duskTop ='#ffb175', duskBot ='#ffd6a6';
 
   // blend langit
   const baseTop = mixColor(nightTop, dayTop, dayness);
@@ -489,18 +495,18 @@ function renderBackground(){
   drawSky(skyTop, skyBot);
 
   // bintang redup saat terang
-  const starAlpha = Math.max(0, (0.55 - dayness) * 2.2);
+  const starAlpha = Math.max(0, (0.4 - dayness) * 3.0);
   if (starAlpha>0.01) drawStars(starAlpha);
 
-  // awan (lebih tipis saat malam)
+  // awan
   const cloudA = 0.92 * Math.max(0.45, dayness);
   drawClouds(cloudOffset1, cloudOffset2, cloudA);
 
-  // alpha matahari & bulan — cross-fade tajam supaya jelas
-  const sunAlpha  = remapSmooth(sinEl,  -0.05, 0.25); // muncul sedikit di atas horizon
+  // alpha matahari & bulan — cross-fade
+  const sunAlpha  = remapSmooth(sinEl,  -0.05, 0.25);
   const moonAlpha = remapSmooth(-sinEl, -0.05, 0.25);
 
-  // gambar benda langit (kedua urutan tergantung mana yang lebih kuat)
+  // render benda langit
   if (moonAlpha > sunAlpha) {
     if (moonAlpha>0.01){
       const moonX = cx + Math.cos(angle+Math.PI)*rx;
