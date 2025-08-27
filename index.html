@@ -377,6 +377,7 @@
   const BG_PARALLAX = 0.15;           // kecepatan awan relatif
 
   // state bg
+  let currentBgIndex = 0;   // <— Wajib: indeks fase bg aktif (pagi/siang/sore/malam)
   let lastDt = 1/60;
   let bgFadeMsLeft = 0;
   let bgNextIndex  = 0;
@@ -538,10 +539,17 @@
     }
 
     // === PLAYER ===
-    if(state.running && player.sprite && player.sprite.complete){
-      const s = player.r*2.2*1.15; ctx.drawImage(player.sprite, player.x-s/2, player.y-s/2, s, s);
-    }
+if (state.running) {
+  const s = player.r*2.2*1.15;
+  if (player.sprite && player.sprite.complete) {
+    ctx.drawImage(player.sprite, player.x - s/2, player.y - s/2, s, s);
+  } else {
+    // fallback sederhana agar pemain tetap terlihat saat sprite belum load
+    ctx.fillStyle = '#fff';
+    ctx.beginPath(); ctx.arc(player.x, player.y, player.r, 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.stroke();
   }
+}
 
   /* ============== HELPERS (tetap) ============== */
   function circleRect(cx,cy,cr, rx,ry,rw,rh){
