@@ -231,14 +231,10 @@ const START_AT_NOON = 0.50; // 0..1 posisi dalam 1 hari
 /* palet fase (dipakai sebagai baseline; tint sunset/dawn ditambahkan terpisah) */
 const SKY_PHASE = [
   { top:'#9fd6ff', bot:'#e6f4ff' }, // SIANG
-  { top:'#ffb17a', bot:'#ffe0b0' }, // SORE (nanti ditint lagi)
   { top:'#0a0f1e', bot:'#121a2c' }, // MALAM
-  { top:'#0a0f1e', bot:'#1a2b4e' }, // SUBUH (nanti ditint biru)
 ];
 /* tint tambahan saat dekat horizon */
-const DUSK_TINT = { top:'#ffb07a', bot:'#ffd7a1' }; // warm jingga
-const DAWN_TINT = { top:'#244b9a', bot:'#3e74c9' }; // cool biru subuh
-
+ 
 let cloudOffset1=0, cloudOffset2=0;
 let dayClock     = START_AT_NOON * DAY_MS;
 let bgTLast      = performance.now();
