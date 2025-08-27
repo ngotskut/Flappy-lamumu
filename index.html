@@ -269,7 +269,7 @@ async function gameOver(){
   overlay.style.display='flex';
   validateName();
   try{ const moo=document.getElementById('moo'); moo.currentTime=0; await moo.play(); }catch(_){}
-  try{ await saveScore((nameInput.value||'').trim(), state.score); }catch(e){ console.warn(e); }
+  try{ await saveScore((nameInput.value||'').trim(), state.score); }catch(e){ console.warn('save score failed',e); }
   openLeaderboard();
 }
 
@@ -298,7 +298,7 @@ function renderLeaderboard(items){
   lbList.innerHTML=`<table><thead><tr><th>#</th><th>Name</th><th>Score</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
-/* ================== PROCEDURAL BACKGROUND (versi jelas) ================== */
+/* ================== PROCEDURAL BACKGROUND ================== */
 /* Durasi 1 fase (pagi/siang/senja/malam). GANTI DI SINI. */
 const PHASE_MS = 15000;
 const DAY_MS   = PHASE_MS * 4;
@@ -315,23 +315,23 @@ const PAL = {
 /* state bg */
 let cloudOffset1=0, cloudOffset2=0;
 let dayClock = 0;                 // ms 0..DAY_MS
-let bgTLast = performance.now();  // agar jalan meski game pause
+let bgTLast = performance.now();
 
 /* bintang */
 const STARS = Array.from({length:120},()=>({x:Math.random(), y:Math.random()*0.6, tw:0.6+Math.random()*0.5}));
 
-/* util warna (hex lerp) */
+/* util warna (hex) */
 function hexToRgb(h){const p=n=>parseInt(n,16); return [p(h.slice(1,3)),p(h.slice(3,5)),p(h.slice(5,7))];}
 function rgbToHex3(r,g,b){const h=n=>('0'+(n|0).toString(16)).slice(-2); return '#'+h(r)+h(g)+h(b);}
-function hexLerp(a,b,t){const [r1,g1,b1]=hexToRgb(a),[r2,g2,b2]=hexToRgb(b);const r=r1+(r2-r1)*t,g=g1+(g2-g1)*t,bv=b1+(b2-b1)*t;return rgbToHex3(r,g,bv);}
-function smooth01(t){return t*t*(3-2*t);}
-function cycDist(a,b){const d=Math.abs(a-b);return Math.min(d,1-d);}
-function triWeight(p, center, width){const d=cycDist(p,center); const w=clamp(1 - d/width, 0, 1); return smooth01(w);}
 function blendHex(colors, weights){
   let R=0,G=0,B=0, s=weights.reduce((a,b)=>a+b,0)||1;
   for(let i=0;i<colors.length;i++){const [r,g,b]=hexToRgb(colors[i]); const w=weights[i]/s; R+=r*w; G+=g*w; B+=b*w;}
   return rgbToHex3(R,G,B);
 }
+const clamp=(v,min,max)=>Math.max(min,Math.min(max,v)); // re-decl safe here for bg
+function cycDist(a,b){const d=Math.abs(a-b);return Math.min(d,1-d);}
+function smooth01(t){return t*t*(3-2*t);}
+function triWeight(p, center, width){const d=cycDist(p,center); const w=clamp(1 - d/width, 0, 1); return smooth01(w);}
 
 /* ---------- Pegunungan ---------- */
 let peaksFar=[], peaksNear=[];
@@ -379,7 +379,7 @@ function drawStars(alpha){
   ctx.restore();
 }
 
-/* matahari & bulan (bulan sabit bersih via masking warna langit) */
+/* matahari & bulan (sabit bersih via masking warna langit) */
 function drawSun(x,y,a){
   const R=Math.min(W,H)*0.08;
   ctx.save(); ctx.globalAlpha=a;
@@ -394,14 +394,12 @@ function drawSun(x,y,a){
 function drawMoonCrescent(x,y,a, skyTopHex, skyBotHex){
   const R=Math.min(W,H)*0.06;
   const t = clamp(y/H, 0, 1);
-  const skyMask = hexLerp(skyTopHex, skyBotHex, t);
-  ctx.save();
-  ctx.globalAlpha = a;
-  // disk
-  ctx.fillStyle = '#E8EEF5';
+  const skyMask = blendHex([skyTopHex, skyBotHex],[1-t,t]);
+  ctx.save(); ctx.globalAlpha=a;
+  ctx.fillStyle='#E8EEF5';
   ctx.beginPath(); ctx.arc(x,y,R,0,Math.PI*2); ctx.fill();
-  // mask untuk membentuk sabit
-  ctx.fillStyle = skyMask;
+  // masking supaya sabit (menggunakan warna langit)
+  ctx.fillStyle=skyMask;
   ctx.beginPath(); ctx.arc(x+R*0.38, y-R*0.06, R*0.95, 0, Math.PI*2); ctx.fill();
   ctx.restore();
 }
@@ -441,7 +439,7 @@ function drawGrassBand(topY, c1, c2){
   ctx.restore();
 }
 
-/* render background penuh (fase jelas & transisi halus) */
+/* render background penuh */
 function renderBackground(){
   // waktu
   const now=performance.now();
@@ -509,7 +507,7 @@ function draw(){
   ctx.clearRect(0,0,W,H);
   renderBackground();
 
-  // PIPES (sementara biru solid)
+  // PIPES
   ctx.fillStyle='#1f4fd1';
   for(const p of pipes){
     ctx.fillRect(p.x,0,p.width,p.y);
