@@ -119,10 +119,15 @@ nameInput.addEventListener('blur',validateName);
 validateName();
 
 let W=0,H=0,DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
-function resize(){ W=innerWidth|0; H=innerHeight|0;
-  canvas.width=(W*DPR)|0; canvas.height=(H*DPR)|0; canvas.style.width=W+'px'; canvas.style.height=H+'px';
+function resize(){
+  W = innerWidth|0; H = innerHeight|0;
+  canvas.width  = (W*DPR)|0; canvas.height = (H*DPR)|0;
+  canvas.style.width = W+'px'; canvas.style.height = H+'px';
   ctx.setTransform(DPR,0,0,DPR,0,0);
-}
+
+  // 👉 penting untuk tajam di layar HP/high-DPI
+  brickPattern = null;
+ }
 addEventListener('resize',resize,{passive:true}); resize();
 
 const state={running:false, score:0, time:0, speedBase:190, speedMax:420, speed:190, pipesPassed:0, speedPerPipe:2.2, gravity:900, flapVel:-400, charIndex:0};
