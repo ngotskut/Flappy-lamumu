@@ -169,10 +169,22 @@ const SKY_PHASE = [
 const DUSK_TINT  = { top:'#ffb07a', bot:'#ffd7a1' }; // warm
 const DAWN_TINT  = { top:'#244b9a', bot:'#3e74c9' }; // cool biru subuh
 
-let cloudOffset1=0, cloudOffset2=0;
-let dayClock = START_AT_NOON * DAY_MS;
-let bgTLast = performance.now();
-let brightness = 1; // 0..1
+let cloudOffset1 = 0, cloudOffset2 = 0;
+let dayClock     = START_AT_NOON * DAY_MS;   // ⬅️ pasang hook di bawah baris ini
+let bgTLast      = performance.now();
+let brightness   = 1; // 0..1
+
+// DEBUG HOOKS (agar bisa tes dari Console)
+window.DAY_MS = DAY_MS;
+Object.defineProperty(window,'dayClock',{
+  get(){ return dayClock; },
+  set(v){ dayClock = ((v % DAY_MS) + DAY_MS) % DAY_MS; }
+});
+window.setNoon     = () => window.dayClock = 0.50 * DAY_MS;
+window.setSunset   = () => window.dayClock = 0.75 * DAY_MS;
+window.setMidnight = () => window.dayClock = 0.00 * DAY_MS;
+window.setDawn     = () => window.dayClock = 0.25 * DAY_MS;
+window.__sky = { rawElev:0, brightness:0 };
 
 const STARS = Array.from({length:120},()=>({x:Math.random(), y:Math.random()*0.6, tw:0.6+Math.random()*0.5}));
 
