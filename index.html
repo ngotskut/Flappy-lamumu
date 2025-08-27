@@ -469,7 +469,15 @@ function draw(){
     else { ctx.fillStyle='#ff3b3b'; ctx.beginPath(); ctx.arc(0,0,s/2,0,Math.PI*2); ctx.fill(); }
     ctx.restore();
   }
+// ...setelah menggambar background & (mungkin) pipa biru lama...
 
+// === overlay bata: gambar pipa bata PALING TERAKHIR supaya menimpa yang biru ===
+for (const p of pipes) {
+  drawBrickPipe(p.x, 0,             p.width, p.y);
+  drawBrickPipe(p.x, p.y + p.gap,    p.width, H - (p.y + p.gap));
+}
+
+// --- baru setelah itu gambar BONUS & PLAYER ---
   // PLAYER
   if(state.running){
     const s=player.r*2.2*1.15;
