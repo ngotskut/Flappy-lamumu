@@ -4,6 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <title>Flappy Lamumu</title>
+<script defer src="/_vercel/insights/script.js"></script>
 <style>
   /* penting agar input tidak melebar keluar panel */
   *,*::before,*::after{ box-sizing:border-box }
@@ -31,11 +32,12 @@
     overflow-x:auto; -webkit-overflow-scrolling:touch; scroll-behavior:smooth;
     padding-bottom:4px; margin-top:10px;
   }
+  /* sembunyikan scrollbar agar bersih */
   #charRow::-webkit-scrollbar{height:0}
   #charRow{scrollbar-width:none}
 
   .card{
-    flex:0 0 160px;
+    flex:0 0 160px; /* lebar kartu tetap agar mudah di-swipe */
     border:1px solid #e5e7eb;border-radius:12px;padding:10px 10px 12px;
     text-align:center;background:#fff
   }
@@ -62,7 +64,7 @@
   #lbList table{
     width:100%;
     border-collapse:collapse;
-    table-layout:fixed;
+    table-layout:fixed;                 /* kunci layout kolom */
     font-size:14px;
   }
   #lbList thead th,
@@ -72,14 +74,17 @@
     vertical-align:middle;
     white-space:nowrap;
   }
+  /* Kolom rank (#) */
   #lbList thead th:nth-child(1),
   #lbList tbody td:nth-child(1){
     width:52px;text-align:center;
   }
+  /* Kolom Name */
   #lbList thead th:nth-child(2),
   #lbList tbody td:nth-child(2){
     width:auto;text-align:left;
   }
+  /* Kolom Score */
   #lbList thead th:nth-child(3),
   #lbList tbody td:nth-child(3){
     width:96px;text-align:right;
@@ -131,11 +136,16 @@
       <div class="muted" style="text-align:center;margin-top:6px">Tip: You can change character during play by pressing <b>C</b>.</div>
     </div>
   </div>
+
+  <!-- === Audio elements (tambahan) === -->
+  <audio id="bgm" src="assets/sweet-country-farm-music-full-354815.mp3" loop preload="auto"></audio>
+  <audio id="moo" src="assets/cow-moo-390282.mp3" preload="auto"></audio>
 </div>
 
 <script>
 (() => {
-  /* ====== ASSETS ====== */
+  /* ====== BAGIAN GAME & LEADERBOARD (tetap) ====== */
+
   const CHAR_SRCS = [
     'assets/lamumu1.png',
     'assets/lamumu2.png',
@@ -144,20 +154,6 @@
   ];
   const BONUS_SRC = 'assets/bonus.png';
 
-  /* ====== BACKGROUND (empat waktu, opsional gambar — tidak dipakai di mode prosedural) ====== */
-  const BG_SRCS = [
-    'assets/bg_morning.jpg',
-    'assets/bg_day.jpg',
-    'assets/bg_dusk.jpg',
-    'assets/bg_night.jpg'
-  ];
-  const bgImgs = BG_SRCS.map(src => { const im=new Image(); im.src=src; return im; });
-
-  let currentBgIndex = 0;
-  const bgPatterns = [];
-  const pipePatterns = [];
-
-  /* ====== DOM ====== */
   const canvas = document.getElementById('game');
   const ctx = canvas.getContext('2d');
   const scoreEl = document.getElementById('score');
@@ -166,7 +162,7 @@
   const nameInput = document.getElementById('playerName');
   const nameErr = document.getElementById('nameErr');
 
-  // leaderboard panel
+  // buat panel leaderboard
   const startPanel = document.getElementById('startPanel');
   const btnLb = document.getElementById('btnLb');
   const lbPanel = document.createElement('div');
@@ -249,7 +245,7 @@
     overlay.style.display='none';
   }
 
-  const rand=(a,b)=>a+Math.random()*(b-a));
+  const rand=(a,b)=>a+Math.random()*(b-a);
   const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
   function needPipe(){ if(!pipes.length) return true; const last=pipes[pipes.length-1]; return (W-last.x) >= rand(PIPE.spawnMin,PIPE.spawnMax); }
   function spawnPipe(){
@@ -272,9 +268,6 @@
   requestAnimationFrame(loop);
 
   function update(dt){
-    // [ADD PROC BG] simpan dt untuk animasi bg
-    lastDt = dt;
-
     state.time+=dt;
     state.speed = Math.min(state.speedMax, state.speedBase + state.pipesPassed*state.speedPerPipe);
 
@@ -300,22 +293,31 @@
       if(b.x < -80) bonuses.splice(i,1);
     }
 
-    // [ADD PROC BG] parallax awan (bergerak pelan ikut speed)
+    scoreEl.textContent='Score: '+state.score;
+
+    /* ===== [ADD PROC BG] simpan dt & geser awan parallax ===== */
+    lastDt = dt;
     cloudOffset1 = (cloudOffset1 + state.speed * BG_PARALLAX * 0.50 * dt) % W;
     cloudOffset2 = (cloudOffset2 + state.speed * BG_PARALLAX * 0.25 * dt) % W;
-
-    scoreEl.textContent='Score: '+state.score;
   }
 
   async function gameOver(){
     state.running=false;
     overlay.style.display='flex';
     validateName();
+
+    // === SFX moo saat game over (tetap) ===
+    try { 
+      const moo = document.getElementById('moo');
+      moo.currentTime = 0; 
+      await moo.play(); 
+    } catch(_) {}
+
     try{ await saveScore((nameInput.value||'').trim(), state.score); }catch(e){ console.warn(e); }
     openLeaderboard();
   }
 
-  /* ====== SAVE SCORE & LEADERBOARD ====== */
+  // ====== SAVE SCORE & LEADERBOARD ======
   async function saveScore(name, score){
     if(!name || name.length<3) return;
     await fetch('/api/leaderboard/submit', {
@@ -366,33 +368,42 @@
     `;
   }
 
-  /* ====== [ADD PROC BG] PROSEDURAL BACKGROUND ====== */
+  /* =================== [ADD PROC BG] PROSEDURAL BACKGROUND =================== */
+
+  // setting utama
   const USE_PROCEDURAL_BG = true;     // aktifkan mode tanpa gambar
   const BG_CYCLE_MS = 60000;          // 60 dtk per fase
   const BG_FADE_MS  = 1500;           // crossfade halus
   const BG_PARALLAX = 0.15;           // kecepatan awan relatif
+
+  // state bg
   let lastDt = 1/60;
   let bgFadeMsLeft = 0;
   let bgNextIndex  = 0;
   let cloudOffset1 = 0, cloudOffset2 = 0;
 
+  // fase: warna langit (atas, bawah), posisi Y matahari/bulan, jumlah bintang
   const phases = [
     { name:'morning', sky:['#FFEDD5','#FDE68A'], sunY:0.35, moon:false, stars:0 },
     { name:'day',     sky:['#BEE3F8','#90CDF4'], sunY:0.22, moon:false, stars:0 },
     { name:'dusk',    sky:['#FECACA','#FBCFE8'], sunY:0.45, moon:false, stars:20 },
     { name:'night',   sky:['#0F172A','#1E293B'], sunY:0.80, moon:true,  stars:80 },
   ];
+
+  // bintang
   const STARS = Array.from({length:120}, () => ({
     x: Math.random(),
     y: Math.random()*0.6,
     tw: 0.5 + Math.random()*0.5
   }));
 
+  // timer perpindahan fase otomatis
   setInterval(() => {
     bgNextIndex  = (currentBgIndex + 1) % phases.length;
     bgFadeMsLeft = BG_FADE_MS;
   }, BG_CYCLE_MS);
 
+  // helper warna & gambar elemen langit
   function lerp(a,b,t){ return a+(b-a)*t; }
   function lerpColor(c1,c2,t){
     const p = n => parseInt(n,16);
@@ -456,12 +467,13 @@
     ctx.restore();
   }
 
-  /* ====== DRAW ====== */
+  /* =================== DRAW =================== */
   function draw(){
     ctx.clearRect(0,0,W,H);
 
-    // ===== PROSEDURAL BG (tanpa gambar) =====
-    if (USE_PROCEDURAL_BG){
+    // === PROSEDURAL BACKGROUND ===
+    const BG_ENABLED = USE_PROCEDURAL_BG;
+    if (BG_ENABLED){
       let tFade = 0;
       if (bgFadeMsLeft > 0){
         tFade = 1 - (bgFadeMsLeft / BG_FADE_MS);
@@ -470,12 +482,12 @@
       const cur = phases[currentBgIndex];
       const nxt = phases[(currentBgIndex + (tFade>0 ? 1 : 0)) % phases.length];
 
-      // langit (crossfade warna)
+      // langit
       const skyTop = tFade ? lerpColor(cur.sky[0], nxt.sky[0], tFade) : cur.sky[0];
       const skyBot = tFade ? lerpColor(cur.sky[1], nxt.sky[1], tFade) : cur.sky[1];
       drawGradientSky(skyTop, skyBot);
 
-      // posisi X benda langit ping-pong 0..1..0
+      // benda langit
       const dayX = ( (performance.now()/1000) * 0.03 ) % 2;
       const xNorm = dayX>1 ? 2-dayX : dayX;
       const yNorm = tFade ? lerp(cur.sunY, nxt.sunY, tFade) : cur.sunY;
@@ -507,32 +519,17 @@
         currentBgIndex = bgNextIndex;
       }
     } else {
-      // fallback gambar lama (kalau mau pakai)
-      const bg = bgImgs[currentBgIndex];
-      if (bg && bg.complete){
-        const iw = bg.naturalWidth, ih = bg.naturalHeight;
-        const scale = Math.max(W/iw, H/ih);
-        const dw = iw*scale, dh = ih*scale;
-        const dx = (W - dw)/2, dy = (H - dh)/2;
-        ctx.drawImage(bg, dx, dy, dw, dh);
-      } else {
-        const g = ctx.createLinearGradient(0,0,0,H);
-        g.addColorStop(0,'#cfefff'); g.addColorStop(1,'#bde6fd');
-        ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-      }
+      // fallback: gradient default CSS body
     }
 
-    // Pipes (pakai pattern jika ada; jika tidak, solid)
-    ctx.save();
-    const pat = pipePatterns[currentBgIndex];
-    ctx.fillStyle = pat ? pat : '#8c4a2d';
-    for(const p of pipes){
-      fillRoundRect(p.x,0,p.width,p.y,10);
-      fillRoundRect(p.x,p.y+p.gap,p.width,H-(p.y+p.gap),10);
+    // === PIPES ===
+    ctx.fillStyle='#1f4fd1';
+    for(const p of pipes){ 
+      ctx.fillRect(p.x,0,p.width,p.y); 
+      ctx.fillRect(p.x,p.y+p.gap,p.width,H-(p.y+p.gap)); 
     }
-    ctx.restore();
 
-    // Bonus
+    // === BONUS ===
     for(const b of bonuses){
       ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(b.angle);
       const s=b.size; if(bonusImg.complete) ctx.drawImage(bonusImg,-s/2,-s/2,s,s);
@@ -540,34 +537,24 @@
       ctx.restore();
     }
 
-    // Player
+    // === PLAYER ===
     if(state.running && player.sprite && player.sprite.complete){
       const s = player.r*2.2*1.15; ctx.drawImage(player.sprite, player.x-s/2, player.y-s/2, s, s);
     }
   }
 
-  /* ====== HELPERS ====== */
+  /* ============== HELPERS (tetap) ============== */
   function circleRect(cx,cy,cr, rx,ry,rw,rh){
     const tx=Math.max(rx,Math.min(cx,rx+rw)), ty=Math.max(ry,Math.min(cy,ry+rh));
     const dx=cx-tx, dy=cy-ty; return dx*dx+dy*dy <= cr*cr;
   }
   function dist(x1,y1,x2,y2){ const dx=x1-x2, dy=y1-y2; return Math.hypot(dx,dy); }
   function escapeHtml(s){ return (s+'').replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
-  function fillRoundRect(x,y,w,h,r){
-    const rr=Math.min(r, Math.abs(w)/2, Math.abs(h)/2);
-    ctx.beginPath();
-    ctx.moveTo(x+rr,y);
-    ctx.arcTo(x+w,y, x+w,y+h, rr);
-    ctx.arcTo(x+w,y+h, x, y+h, rr);
-    ctx.arcTo(x, y+h, x, y, rr);
-    ctx.arcTo(x, y, x+w, y, rr);
-    ctx.closePath();
-    ctx.fill();
-  }
 
-  /* === Drag-to-scroll karakter === */
+  /* === Drag-to-scroll untuk slider karakter (tetap) === */
   const charRow = document.getElementById('charRow');
   let isDown=false,startX=0,startLeft=0, dragged=false;
+
   const onDown = (x)=>{ isDown=true; dragged=false; startX=x; startLeft=charRow.scrollLeft; };
   const onMove = (x)=>{
     if(!isDown) return;
@@ -577,6 +564,7 @@
   };
   const onUp = ()=>{
     isDown=false;
+    // cegah klik accidental saat dragging
     if(dragged){
       const radios = charRow.querySelectorAll('input[type="radio"]');
       radios.forEach(r=>{
@@ -584,12 +572,29 @@
       });
     }
   };
+  // mouse
   charRow.addEventListener('mousedown',e=>onDown(e.pageX));
   window.addEventListener('mousemove',e=>onMove(e.pageX));
   window.addEventListener('mouseup',onUp);
+  // touch
   charRow.addEventListener('touchstart',e=>onDown(e.touches[0].pageX),{passive:true});
   charRow.addEventListener('touchmove',e=>onMove(e.touches[0].pageX),{passive:true});
   charRow.addEventListener('touchend',onUp);
+
+  /* === Mulai BGM setelah interaksi pertama (autoplay policy) === */
+  const bgm = document.getElementById('bgm');
+  if(bgm){
+    bgm.volume = 0.35;
+    let started = false;
+    function unlockBgm(){
+      if(!started){
+        bgm.play().then(()=>{ started = true; }).catch(()=>{});
+      }
+    }
+    window.addEventListener('touchstart', unlockBgm, { once:true, passive:true });
+    window.addEventListener('mousedown',   unlockBgm, { once:true, passive:true });
+    window.addEventListener('keydown',     unlockBgm, { once:true, passive:true });
+  }
 
 })();
 </script>
