@@ -339,10 +339,11 @@ function renderBackground(){
   // ===== KETINGGIAN MATAHARI → BRIGHTNESS =====
   const rawElev   = (cy - sunY) / (H * 0.45);     // <0: di bawah horizon; >0: di atas
   const elevNorm  = clamp(rawElev, 0, 1);
-  const daylight  = smooth01(elevNorm);
-  const sunriseBoost = remapSmooth(rawElev, -0.20, 0.05) * 0.50; // bantu subuh cepat terang
-  brightness = clamp(daylight + sunriseBoost, 0, 1);
+const daylight  = smooth01(elevNorm);
 
+// dorong terang di subuh + sedikit bias siang
+const sunriseBoost = remapSmooth(rawElev, -0.22, 0.03) * 0.55;
+brightness = clamp(daylight * 0.92 + sunriseBoost + 0.06, 0, 1);
   // ===== LANGIT: malam → siang, lalu tint dawn/sunset dekat horizon =====
   const nightTop='#0a0f1e', nightBot='#121a2c';
   const dayTop  ='#9fd6ff', dayBot  ='#e6f4ff';
