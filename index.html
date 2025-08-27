@@ -207,18 +207,39 @@ function drawSun(x,y,a){
 }
 
 /* bulan sabit natural */
-function drawMoonCrescent(x,y,a, thin=0.54, tilt=-0.16){
-  const R=Math.min(W,H)*0.06;
-  ctx.save(); ctx.translate(x,y); ctx.rotate(tilt); ctx.globalAlpha=a;
-  ctx.fillStyle='#EDEFF7';
-  ctx.beginPath(); ctx.arc(0,0,R,0,Math.PI*2);
-  ctx.moveTo(R*0.70, -R*0.05);
-  ctx.ellipse(R*0.70, -R*0.05, R*thin, R*thin*0.98, 0, 0, Math.PI*2);
-  ctx.fill('evenodd');
-  const g=ctx.createRadialGradient(0,0,R*0.35,0,0,R*1.1);
-  g.addColorStop(0,'rgba(255,255,255,0.10)');
-  g.addColorStop(1,'rgba(255,255,255,0)');
-  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,R*1.1,0,Math.PI*2); ctx.fill();
+function drawMoonCrescent(x,y,a, thin=0.62, tilt=-0.18){
+  const R = Math.min(W,H)*0.06;
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.rotate(tilt);
+
+  // group alpha
+  ctx.globalAlpha = a;
+
+  // 1) disk bulan
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = '#EFF3FA';
+  ctx.beginPath();
+  ctx.arc(0, 0, R, 0, Math.PI*2);
+  ctx.fill();
+
+  // 2) "ukir" sisi gelap dengan ellipse offset (destination-out)
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.beginPath();
+  // offset sedikit ke kanan-atas, elips sedikit pipih → bentuk sabit natural
+  ctx.ellipse(R*0.55, -R*0.06, R*thin, R*thin*0.98, 0, 0, Math.PI*2);
+  ctx.fill();
+
+  // 3) glow halus di sisi terang
+  ctx.globalCompositeOperation = 'lighter';
+  const g = ctx.createRadialGradient(-R*0.15, 0, R*0.25, -R*0.15, 0, R*1.1);
+  g.addColorStop(0, 'rgba(255,255,255,0.12)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(-R*0.15, 0, R*1.1, 0, Math.PI*2);
+  ctx.fill();
+
   ctx.restore();
 }
 
@@ -285,39 +306,51 @@ function renderBackground(){
   const dt=Math.min(0.05,(now-bgTLast)/1000); bgTLast=now;
   dayClock = (dayClock + dt*1000) % DAY_MS;
 
-  const prog = (dayClock % DAY_MS) / DAY_MS;
+  // progress 0..1 dari dayClock
+const prog = (dayClock % DAY_MS) / DAY_MS;
 
-  // orbit elips
-  const angle = (prog*2*Math.PI) - Math.PI/2;
-  const cx=W*0.5, cy=H*0.62;
-  const rx=W*0.42, ry=H*0.36;
-  const sunX=cx + Math.cos(angle)*rx;
-  const sunY=cy - Math.sin(angle)*ry;
+// --- PERBAIKAN: sinkronkan fase warna dengan orbit ---
+// orbit: prog=0.5 = siang (matahari paling tinggi)
+// jadi geser fase warna 0.5 ke 0.0 agar 0=siang, 0.25=sore, 0.5=malam, 0.75=subuh
+const phaseProg = (prog + 0.5) % 1;
 
-  // elevasi
-  const rawElev   = (cy - sunY)/(H*0.45);
-  const elevNorm  = clamp(rawElev, 0, 1);
-  const daylight  = smooth01(elevNorm);
-  const sunriseBoost = remapSmooth(rawElev, -0.12, 0.06) * 0.25;
-  brightness = clamp(daylight + sunriseBoost, 0, 1);
+const p = phaseProg * 4;           // 0..4
+const i = Math.floor(p) & 3;       // indeks fase
+const t = smooth01(p - Math.floor(p));
 
-  // campur palet berdasarkan fase
-  const p   = prog*4;
-  const i   = Math.floor(p) & 3;
-  const t   = smooth01(p - Math.floor(p));
-  let skyTop  = mixColor(SKY_PHASE[i].top,  SKY_PHASE[(i+1)&3].top,  t);
-  let skyBot  = mixColor(SKY_PHASE[i].bot,  SKY_PHASE[(i+1)&3].bot,  t);
+// campur palet antar fase
+let skyTop  = mixColor(SKY_PHASE[i].top, SKY_PHASE[(i+1)&3].top, t);
+let skyBot  = mixColor(SKY_PHASE[i].bot, SKY_PHASE[(i+1)&3].bot, t);
 
-  // tint horizon
-  const horizonProx = clamp(1 - Math.abs((cy - sunY)/(H*0.16)), 0, 1);
-  const warmT = horizonProx * clamp(rawElev, 0, 1) * 0.60;       // sore
-  const dawnT = horizonProx * clamp(-rawElev,0,1) * 0.85;        // subuh
-  skyTop = mixColor(skyTop, DUSK_TINT.top, warmT);
-  skyBot = mixColor(skyBot, DUSK_TINT.bot, warmT);
-  skyTop = mixColor(skyTop, DAWN_TINT.top, dawnT);
-  skyBot = mixColor(skyBot, DAWN_TINT.bot, dawnT);
+// tint horizon (tetap sama seperti sebelumnya)
+const angle = (prog*2*Math.PI) - Math.PI/2;  // <- tetap pakai prog asli untuk orbit
+const cx=W*0.5, cy=H*0.62;
+const rx=W*0.42, ry=H*0.36;
+const sunX=cx + Math.cos(angle)*rx;
+const sunY=cy - Math.sin(angle)*ry;
 
-  drawSky(skyTop, skyBot);
+const rawElev   = (cy - sunY)/(H*0.45);
+const elevNorm  = clamp(rawElev, 0, 1);
+const daylight  = smooth01(elevNorm);
+
+// sedikit lebih terang saat subuh (sunrise boost)
+const sunriseBoost = remapSmooth(rawElev, -0.14, 0.10) * 0.35;
+brightness = clamp(daylight + sunriseBoost, 0, 1);
+
+const horizonProx = clamp(1 - Math.abs((cy - sunY)/(H*0.16)), 0, 1);
+const warmT = horizonProx * clamp(rawElev, 0, 1) * 0.60;  // sore
+const dawnT = horizonProx * clamp(-rawElev,0,1) * 0.85;   // subuh
+skyTop = mixColor(skyTop, DUSK_TINT.top, warmT);
+skyBot = mixColor(skyBot, DUSK_TINT.bot, warmT);
+skyTop = mixColor(skyTop, DAWN_TINT.top, dawnT);
+skyBot = mixColor(skyBot, DAWN_TINT.bot, dawnT);
+
+// tambahan halus: tarik sedikit ke warna siang sesuai brightness
+skyTop = mixColor(skyTop, SKY_PHASE[0].top, brightness * 0.15);
+skyBot = mixColor(skyBot, SKY_PHASE[0].bot, brightness * 0.15);
+
+// gambar langit
+drawSky(skyTop, skyBot);
 
   // bintang
   const starAlpha = 1 - remapSmooth(rawElev, -0.10, 0.02);
