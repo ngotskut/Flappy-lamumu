@@ -235,119 +235,75 @@ function spawnBonusAtPipe(p){
   bonuses.push({x:p.x+PIPE.width+120,y,size:BONUS.sizeBase,angle:0});
 }
 
-/* ===== Procedural background config ===== */
-const USE_PROCEDURAL_BG=true;
-const PHASE_MS=10000;                 // lama 1 fase (pagi/siang/sore/malam) -> ubah di sini
-const BG_PARALLAX=0.15;               // kecepatan awan relatif
-const DAY_MS=PHASE_MS*4;              // satu hari penuh
-let dayClock=0;                       // ms sejak awal
-let lastDt=1/60;
+/* ===== Procedural background (baru) ===== */
+const PHASE_MS = 60000;                 // ubah ini utk durasi 1 fase; 1 hari = PHASE_MS*4
+const DAY_MS   = PHASE_MS*4;
+const BG_PARALLAX=0.15;
+
+let dayClock=0;                          // ms
 let cloudOffset1=0,cloudOffset2=0;
-let groundOffset1=0,groundOffset2=0,groundOffset3=0;
+let ridgeOff1=0, ridgeOff2=0, grassOff=0;
 
-const phases=[
-  // Pagi = biru agak gelap → Day = biru langit
-  {skyTop:'#7db2e6', skyBot:'#b3d5ff', stars:0},
-  {skyTop:'#9bd6ff', skyBot:'#6cc0ff', stars:0}, // siang
-  {skyTop:'#feb0a8', skyBot:'#fcd38f', stars:0.2},// sore
-  {skyTop:'#0b1b35', skyBot:'#142c4b', stars:1.0},// malam
-];
-
-// bintang
-const STARS=Array.from({length:140},()=>({x:Math.random(), y:Math.random()*0.65, tw:0.5+Math.random()*0.5}));
-
-/* ===== Background helpers ===== */
-function lerp(a,b,t){return a+(b-a)*t;}
+/* util warna */
 function hexToRgb(h){const p=n=>parseInt(n,16);return [p(h.slice(1,3)),p(h.slice(3,5)),p(h.slice(5,7))];}
-function lerpColor(h1,h2,t){
+function mixColor(h1,h2,t){
   const [r1,g1,b1]=hexToRgb(h1), [r2,g2,b2]=hexToRgb(h2);
   const r=(r1+(r2-r1)*t)|0, g=(g1+(g2-g1)*t)|0, b=(b1+(b2-b1)*t)|0;
   return `rgb(${r},${g},${b})`;
 }
-function drawGradientSky(top,bottom){
-  const g=ctx.createLinearGradient(0,0,0,H);
-  g.addColorStop(0,top); g.addColorStop(1,bottom);
-  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
-}
-function smoothstep(t){ return t*t*(3-2*t); } // easing halus
+function smooth(t){return t*t*(3-2*t);}
 
-function drawClouds(offset1,offset2,alpha=1){
-  ctx.save(); ctx.globalAlpha=alpha;
-  const baseY1=H*0.20, baseY2=H*0.30;
-  const cloud=(x,y,s)=>{
-    ctx.beginPath(); ctx.fillStyle='rgba(255,255,255,0.92)';
-    ctx.arc(x,y,s,0,Math.PI*2);
-    ctx.arc(x+s*0.8,y+s*0.2,s*0.9,0,Math.PI*2);
-    ctx.arc(x-s*0.7,y+s*0.25,s*0.75,0,Math.PI*2);
-    ctx.fill();
-  };
-  for(let i=-1;i<=4;i++){ cloud(((i*0.38*W)+(offset1%W)), baseY1, Math.min(W,H)*0.07); }
-  ctx.globalAlpha=alpha*0.8;
-  for(let i=-1;i<=4;i++){ cloud(((i*0.55*W)+(offset2%W)), baseY2, Math.min(W,H)*0.055); }
-  ctx.restore();
-}
+/* langit, matahari, bulan, bintang */
+function drawSkySunMoonAndStars(){
+  // sudut orbit disetel supaya jam 6 pagi ≈ sunrise, jam 12 ≈ puncak
+  const angle = ((dayClock % DAY_MS)/DAY_MS)*2*Math.PI - Math.PI/2;
 
-// gunung/rumput 3 lapis (parallax)
-function drawGround(){
-  const h1=H*0.55, h2=H*0.68, h3=H*0.80;
+  const cx=W*0.5, cy=H*0.62; // ‘horizon’ sekitar 0.62H
+  const rx=W*0.42, ry=H*0.36;
 
-  // layer jauh (biru kehijauan)
-  ctx.fillStyle='#2a5a73';
-  ctx.beginPath();
-  ctx.moveTo(-W+groundOffset1, H);
-  for(let x=-W; x<=2*W; x+=W/4){
-    const y=h1 + Math.sin((x+groundOffset1)/W*2*Math.PI)*12;
-    ctx.lineTo(x+groundOffset1, y);
-  }
-  ctx.lineTo(2*W,H); ctx.closePath(); ctx.fill();
-
-  // layer tengah
-  ctx.fillStyle='#2d7b5b';
-  ctx.beginPath();
-  ctx.moveTo(-W+groundOffset2, H);
-  for(let x=-W; x<=2*W; x+=W/4){
-    const y=h2 + Math.sin((x*1.2+groundOffset2)/W*2*Math.PI)*16;
-    ctx.lineTo(x+groundOffset2, y);
-  }
-  ctx.lineTo(2*W,H); ctx.closePath(); ctx.fill();
-
-  // layer depan (rumput)
-  ctx.fillStyle='#3f9b45';
-  ctx.beginPath();
-  ctx.moveTo(-W+groundOffset3, H);
-  for(let x=-W; x<=2*W; x+=W/4){
-    const y=h3 + Math.sin((x*1.6+groundOffset3)/W*2*Math.PI)*22;
-    ctx.lineTo(x+groundOffset3, y);
-  }
-  ctx.lineTo(2*W,H); ctx.closePath(); ctx.fill();
-}
-
-function drawSunMoon(){
-  // sudut 0..2π sepanjang 1 hari penuh
-  const angle = ( (dayClock % DAY_MS) / DAY_MS ) * Math.PI*2;
-  // orbit elips
-  const cx=W*0.5, cy=H*0.42, rx=W*0.38, ry=H*0.28;
   const sunX=cx + Math.cos(angle)*rx;
-  const sunY=cy + Math.sin(angle)*ry;
+  const sunY=cy - Math.sin(angle)*ry; // minus agar sudut positif naik
+
   const moonX=cx + Math.cos(angle+Math.PI)*rx;
-  const moonY=cy + Math.sin(angle+Math.PI)*ry;
+  const moonY=cy - Math.sin(angle+Math.PI)*ry;
 
-  // visibilitas: hanya saat di atas “horizon” (sunY < H*0.62)
-  const sunA = clamp( (H*0.62 - sunY) / (H*0.18), 0, 1 );   // naik → 1, turun → 0
-  const moonA= clamp( (H*0.62 - moonY) / (H*0.18), 0, 1 );
+  // seberapa "siang": tinggi matahari terhadap horizon
+  const dayElev = clamp((cy - sunY) / (H*0.45), 0, 1); // 0=gelap, 1=siang cerah
+  const twilight = clamp(1 - Math.abs((sunY - cy)/(H*0.12)), 0, 1); // dekat horizon → 1
 
-  // matahari
-  if(sunA>0){
+  // warna dasar
+  const dayTop='#9bd6ff', dayBot='#6cc0ff';           // biru langit
+  const nightTop='#0b1b35', nightBot='#142c4b';       // biru tua
+  const dawnTop='#ffd6a3', dawnBot='#ffe59a';         // jingga lembut
+
+  // campur: night→day berdasarkan dayElev, lalu overlay dawn/dusk dekat horizon
+  let top = mixColor(nightTop, dayTop, smooth(dayElev));
+  let bot = mixColor(nightBot, dayBot, smooth(dayElev));
+  top = mixColor(top, dawnTop, twilight*(1-Math.abs(dayElev-0.5)*2));   // hanya di transisi
+  bot = mixColor(bot, dawnBot, twilight*(1-Math.abs(dayElev-0.5)*2));
+
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,top); g.addColorStop(1,bot);
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+
+  // bintang hanya saat gelap
+  const starsA = Math.pow(1-dayElev, 1.6);
+  if(starsA>0.01){ drawStars(starsA); }
+
+  // matahari & bulan (hanya saat layak)
+  const sunVis = clamp((cy - sunY)/(H*0.18), 0, 1) * dayElev;       // matahari muncul saat terang
+  const moonVis= clamp((cy - moonY)/(H*0.18), 0, 1) * (1-dayElev);  // bulan saat gelap
+
+  if(sunVis>0){
     const R=Math.min(W,H)*0.075;
-    ctx.save(); ctx.globalAlpha=sunA; ctx.fillStyle='#FFD166';
+    ctx.save(); ctx.globalAlpha=sunVis; ctx.fillStyle='#FFD166';
     ctx.beginPath(); ctx.arc(sunX,sunY,R,0,Math.PI*2); ctx.fill(); ctx.restore();
   }
-  // bulan
-  if(moonA>0){
+  if(moonVis>0){
     const R=Math.min(W,H)*0.06;
-    ctx.save(); ctx.globalAlpha=moonA; ctx.fillStyle='#E2E8F0';
+    ctx.save(); ctx.globalAlpha=moonVis; ctx.fillStyle='#E2E8F0';
     ctx.beginPath(); ctx.arc(moonX,moonY,R,0,Math.PI*2); ctx.fill();
-    ctx.globalAlpha = moonA*0.25; ctx.fillStyle = '#94A3B8';
+    ctx.globalAlpha = moonVis*0.25; ctx.fillStyle = '#94A3B8';
     for(let i=0;i<5;i++){
       const r=R*(0.1+Math.random()*0.18), a=Math.random()*Math.PI*2, rr=R*0.55;
       const cx2=moonX+Math.cos(a)*rr, cy2=moonY+Math.sin(a)*rr;
@@ -355,44 +311,94 @@ function drawSunMoon(){
     }
     ctx.restore();
   }
+
+  // awan parallax
+  drawClouds(cloudOffset1, cloudOffset2, 0.95);
 }
 
 function drawStars(alpha){
-  if(alpha<=0) return;
-  ctx.save(); ctx.globalAlpha=alpha; ctx.fillStyle='#E5E7EB';
-  for(const s of STARS){
-    const tw=0.6+Math.sin(performance.now()/400*s.tw)*0.4;
+  ctx.save(); ctx.fillStyle='#E5E7EB';
+  const N=140;
+  for(let i=0;i<N;i++){
+    const x=(i*9973 % N)/N*W, y=((i*6151)%N)/N*H*0.65;
+    const tw=0.6+Math.sin(performance.now()/400*(0.5+(i%10)/10))*0.4;
     ctx.globalAlpha=alpha*tw;
-    ctx.fillRect(s.x*W, s.y*H, 2, 2);
+    ctx.fillRect(x,y,2,2);
   }
   ctx.restore();
 }
 
+function drawClouds(offset1,offset2,alpha){
+  ctx.save(); ctx.globalAlpha=alpha;
+  const baseY1=H*0.20, baseY2=H*0.30;
+  const cloud=(x,y,s)=>{
+    ctx.beginPath(); ctx.fillStyle='rgba(255,255,255,0.92)';
+    ctx.arc(x,y,s,0,Math.PI*2);
+    ctx.arc(x+s*0.8, y+s*0.2, s*0.9, 0, Math.PI*2);
+    ctx.arc(x-s*0.7, y+s*0.25, s*0.75, 0, Math.PI*2);
+    ctx.fill();
+  };
+  for(let i=-1;i<=4;i++){ cloud(((i*0.38*W)+(offset1%W)), baseY1, Math.min(W,H)*0.07); }
+  ctx.globalAlpha=alpha*0.85;
+  for(let i=-1;i<=4;i++){ cloud(((i*0.55*W)+(offset2%W)), baseY2, Math.min(W,H)*0.055); }
+  ctx.restore();
+}
+
+/* gunung + rumput */
+function triWave(x){ x=x-Math.floor(x); return Math.abs(2*x-1); } // puncak tajam (gunung)
+function drawMountainsAndGrass(){
+  // layer gunung jauh
+  ridge('#274060', H*0.68, H*0.14, 12, ridgeOff1);
+  // layer bukit tengah (lebih hijau)
+  ridge('#2f6f54', H*0.78, H*0.10, 14, ridgeOff2);
+  // hamparan rumput depan
+  grassStrip();
+}
+
+function ridge(color, baseY, amp, step, off){
+  ctx.fillStyle=color;
+  ctx.beginPath();
+  ctx.moveTo(-W, H);
+  ctx.lineTo(-W, baseY);
+  for(let x=-W; x<=2*W; x+=step){
+    const t1=triWave(((x+off)/ (W*0.45)));
+    const t2=triWave(((x*1.7+off*1.3)/ (W*0.30)));
+    const y = baseY - amp*(0.65*t1 + 0.35*t2);
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(2*W, H);
+  ctx.closePath(); ctx.fill();
+}
+
+function grassStrip(){
+  // dasar rumput
+  const y0=H*0.86;
+  const g=ctx.createLinearGradient(0,y0,0,H);
+  g.addColorStop(0,'#46a74c'); g.addColorStop(1,'#297e31');
+  ctx.fillStyle=g;
+  ctx.beginPath();
+  ctx.moveTo(-W, H);
+  ctx.lineTo(-W, y0);
+  for(let x=-W; x<=2*W; x+=20){
+    const y=y0 - 8*Math.sin((x+grassOff)/W*2*Math.PI*2);
+    ctx.lineTo(x, y);
+  }
+  ctx.lineTo(2*W, H); ctx.closePath(); ctx.fill();
+
+  // bilah rumput tipis
+  ctx.strokeStyle='rgba(255,255,255,0.15)'; ctx.lineWidth=1;
+  for(let x=-W; x<=2*W; x+=14){
+    const h=6 + 6*Math.sin((x+grassOff*1.5)/W*2*Math.PI*3);
+    ctx.beginPath();
+    ctx.moveTo(x, y0);
+    ctx.lineTo(x-2, y0-h);
+    ctx.stroke();
+  }
+}
+
 function renderProceduralBackground(){
-  // fase aktif + blending halus
-  const t = (dayClock % DAY_MS);
-  const phaseIndex = Math.floor(t / PHASE_MS) % 4;
-  const nextIndex  = (phaseIndex + 1) % 4;
-  const local      = smoothstep((t % PHASE_MS) / PHASE_MS);
-  const cur=phases[phaseIndex], nxt=phases[nextIndex];
-
-  // langit
-  const skyTop=lerpColor(cur.skyTop, nxt.skyTop, local);
-  const skyBot=lerpColor(cur.skyBot, nxt.skyBot, local);
-  drawGradientSky(skyTop, skyBot);
-
-  // bintang (beratkan menurut stars cur/nxt)
-  const starAlpha = lerp(cur.stars, nxt.stars, local);
-  drawStars(starAlpha);
-
-  // sun & moon (orbit melingkar)
-  drawSunMoon();
-
-  // awan
-  drawClouds(cloudOffset1, cloudOffset2, 1);
-
-  // pegunungan/rumput
-  drawGround();
+  drawSkySunMoonAndStars();
+  drawMountainsAndGrass();
 }
 
 /* ===== LOOP ===== */
@@ -432,14 +438,13 @@ function update(dt){
 
   scoreEl.textContent='Score: '+state.score;
 
-  // ===== background clocks & parallax =====
-  lastDt=dt;
-  dayClock += dt*1000;                   // jalan terus, bikin transisi mulus
+  // ===== background time & parallax =====
+  dayClock += dt*1000;
   cloudOffset1 = (cloudOffset1 + state.speed * BG_PARALLAX * 0.50 * dt) % W;
   cloudOffset2 = (cloudOffset2 + state.speed * BG_PARALLAX * 0.25 * dt) % W;
-  groundOffset1 = (groundOffset1 - state.speed * 0.20 * dt) % W;
-  groundOffset2 = (groundOffset2 - state.speed * 0.35 * dt) % W;
-  groundOffset3 = (groundOffset3 - state.speed * 0.55 * dt) % W;
+  ridgeOff1    = (ridgeOff1 - state.speed * 0.20 * dt) % (W*2);
+  ridgeOff2    = (ridgeOff2 - state.speed * 0.35 * dt) % (W*2);
+  grassOff     = (grassOff  - state.speed * 0.55 * dt) % (W*2);
 }
 
 async function gameOver(){
@@ -484,13 +489,13 @@ function renderLeaderboard(items){
   </table>`;
 }
 
-/* ===== DRAW (memanggil background baru) ===== */
+/* ===== DRAW ===== */
 function draw(){
   ctx.clearRect(0,0,W,H);
 
-  if(USE_PROCEDURAL_BG) renderProceduralBackground();
+  renderProceduralBackground();
 
-  // Pipes (tetap)
+  // Pipes (masih biru; kalau mau brick nanti bilang ya)
   ctx.fillStyle='#1f4fd1';
   for(const p of pipes){
     ctx.fillRect(p.x,0,p.width,p.y);
