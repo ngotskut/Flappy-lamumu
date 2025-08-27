@@ -180,6 +180,8 @@ Object.defineProperty(window,'dayClock',{
   get(){ return dayClock; },
   set(v){ dayClock = ((v % DAY_MS) + DAY_MS) % DAY_MS; }
 });
+window.__freeze = false;
+window.clockFreeze = (on = true) => { window.__freeze = !!on; };
 window.setNoon     = () => window.dayClock = 0.50 * DAY_MS;
 window.setSunset   = () => window.dayClock = 0.75 * DAY_MS;
 window.setMidnight = () => window.dayClock = 0.00 * DAY_MS;
@@ -319,7 +321,7 @@ function renderBackground(){
   const now = performance.now();
   const dt  = Math.min(0.05,(now-bgTLast)/1000);
   bgTLast   = now;
-  dayClock  = (dayClock + dt*1000) % DAY_MS;
+  if (!window.__freeze) dayClock = (dayClock + dt*1000) % DAY_MS;
 
   // progress 0..1
   const prog = (dayClock % DAY_MS) / DAY_MS;
