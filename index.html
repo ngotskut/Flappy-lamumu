@@ -247,66 +247,88 @@
   }
 
   function renderBackground(){
-    const now=performance.now();
-    const dt=Math.min(0.05,(now-bgTLast)/1000);
-    bgTLast=now;
-    if(!window.__freeze) dayClock=(dayClock+dt*1000)%DAY_MS;
+  const now=performance.now();
+  const dt=Math.min(0.05,(now-bgTLast)/1000);
+  bgTLast=now;
+  if(!window.__freeze) dayClock=(dayClock+dt*1000)%DAY_MS;
 
-    const prog=(dayClock%DAY_MS)/DAY_MS;
+  const prog=(dayClock%DAY_MS)/DAY_MS;
 
-    // Orbit elips matahari/bulan
-    const cx=W*0.5, cy=H*0.62;
-    const rx=W*0.42, ry=H*0.36;
-    const angle=(prog-0.25)*2*Math.PI;
-    const sunX=cx+Math.cos(angle)*rx;
-    const sunY=cy- Math.sin(angle)*ry; // MINUS -> atas layar = lebih kecil y
+  // Orbit elips matahari/bulan
+  const cx=W*0.5, cy=H*0.62;
+  const rx=W*0.42, ry=H*0.36;
+  const angle=(prog-0.25)*2*Math.PI;
+  const sunX=cx+Math.cos(angle)*rx;
+  const sunY=cy- Math.sin(angle)*ry; // NOTE: minus = naik ke atas
 
-    // Elevasi → Brightness (super halus & robust)
-    const rawElev=(cy-sunY)/(H*0.45); // <0 di bawah, >0 di atas
-    brightness = sCurve01( remap01(rawElev, -0.05, 0.35) ); // langsung terang saat matahari naik
+  // ===== BRIGHTNESS SUPER-ROBUST =====
+  // rawElev <0: di bawah horizon, >0: di atas
+  const rawElev=(cy-sunY)/(H*0.45);
 
-    // Warna dasar langit
-    const nightTop='#0a0f1e', nightBot='#121a2c';
-    const dayTop  ='#9fd6ff', dayBot  ='#eef4ff';
-    let skyTop=mixColor(nightTop,dayTop,brightness);
-    let skyBot=mixColor(nightBot,dayBot,brightness);
+  // dasar halus: cepat cerah begitu naik sedikit
+  let b = sCurve01( remap01(rawElev, -0.20, 0.10) );
 
-    // Tint senja/subuh (gaussian di dekat horizon)
-    const gauss=(x,s)=>Math.exp(-(x*x)/(2*s*s));
-    const above=clamp(rawElev,0,1), below=clamp(-rawElev,0,1);
-    const sunsetK=gauss(rawElev-0.06,0.10)*above; // sedikit di atas horizon
-    const dawnK  =gauss(rawElev+0.06,0.12)*below; // sedikit di bawah horizon
-    const SUNSET={top:'#ff9b5e', bot:'#ffd39a'};
-    const DAWN  ={top:'#244b9a', bot:'#3e74c9'};
-    skyTop=mixColor(skyTop,SUNSET.top,Math.min(1,sunsetK*2.0));
-    skyBot=mixColor(skyBot,SUNSET.bot,Math.min(1,sunsetK*2.0));
-    skyTop=mixColor(skyTop,DAWN.top,  Math.min(1,dawnK*1.0));
-    skyBot=mixColor(skyBot,DAWN.bot,  Math.min(1,dawnK*1.0));
+  // HARD FLOOR: kalau matahari DI ATAS horizon, paksa minimal terang
+  if (sunY < cy) b = Math.max(b, 0.75);
 
-    // Langit + objek
-    drawSky(skyTop,skyBot);
+  // sedikit offset supaya tidak pernah hitam total
+  brightness = clamp(0.05 + b*0.95, 0, 1);
 
-    const starAlpha=1-sCurve01(remap01(rawElev,-0.10,0.02));
-    if(starAlpha>0.02) drawStars(starAlpha);
-    const cloudA=0.20+0.75*brightness;
-    cloudOffset1 = (cloudOffset1 + state.speed * 0.15 * 0.50 * dt) % W;
-    cloudOffset2 = (cloudOffset2 + state.speed * 0.15 * 0.25 * dt) % W;
-    drawClouds(cloudOffset1,cloudOffset2,cloudA);
+  // ===== WARNA LANGIT =====
+  const nightTop='#0a0f1e', nightBot='#121a2c';
+  const dayTop  ='#9fd6ff', dayBot  ='#eef4ff';
+  let skyTop=mixColor(nightTop,dayTop,brightness);
+  let skyBot=mixColor(nightBot,dayBot,brightness);
 
-    const sunA=sCurve01(remap01(rawElev,0.02,0.14));
-    const moonA=1-sCurve01(remap01(rawElev,-0.06,0.10));
-    if(sunA>0.01) drawSun(sunX,sunY,sunA);
-    if(moonA>0.01){
-      const moonX=cx+Math.cos(angle+Math.PI)*rx;
-      const moonY=cy- Math.sin(angle+Math.PI)*ry;
-      drawMoonCrescent(moonX,moonY,moonA,0.56,-0.18);
-    }
+  // ===== TINT SENJA & SUBUH (JELAS JINGGA) =====
+  const gauss=(x,s)=>Math.exp(-(x*x)/(2*s*s));
+  const above = Math.max(0, Math.min(1, rawElev));
+  const below = Math.max(0, Math.min(1,-rawElev));
 
-    drawMountainsAndGrass(dt);
+  // puncak sedikit di atas / di bawah horizon
+  const sunsetK = gauss(rawElev-0.06,0.10)*above;
+  const dawnK   = gauss(rawElev+0.06,0.12)*below;
 
-    scoreEl.style.color=(brightness<0.55)?'#fff':'#0b1222';
-    scoreEl.style.textShadow=(brightness<0.55)?'0 1px 2px rgba(0,0,0,.6)':'0 1px 2px rgba(255,255,255,.25)';
+  const SUNSET={top:'#ff9b5e', bot:'#ffd39a'};  // jingga hangat
+  const DAWN  ={top:'#244b9a', bot:'#3e74c9'};  // biru subuh
+
+  // perkuat senja agar “kelihatan jingga”
+  skyTop=mixColor(skyTop,SUNSET.top,Math.min(1,sunsetK*2.0));
+  skyBot=mixColor(skyBot,SUNSET.bot,Math.min(1,sunsetK*2.0));
+
+  // subuh lembut
+  skyTop=mixColor(skyTop,DAWN.top,Math.min(1,dawnK*1.0));
+  skyBot=mixColor(skyBot,DAWN.bot,Math.min(1,dawnK*1.0));
+
+  // gambar langit
+  drawSky(skyTop,skyBot);
+
+  // bintang & awan
+  const starAlpha=1-sCurve01(remap01(rawElev,-0.10,0.02));
+  if(starAlpha>0.02) drawStars(starAlpha);
+
+  const cloudA=0.20+0.75*brightness;
+  cloudOffset1 = (cloudOffset1 + state.speed * 0.15 * 0.50 * dt) % W;
+  cloudOffset2 = (cloudOffset2 + state.speed * 0.15 * 0.25 * dt) % W;
+  drawClouds(cloudOffset1,cloudOffset2,cloudA);
+
+  // matahari / bulan
+  const sunA = sCurve01( remap01(rawElev,  0.02, 0.14) );
+  const moonA= 1 - sCurve01( remap01(rawElev, -0.06, 0.10) );
+  if(sunA>0.01) drawSun(sunX,sunY,sunA);
+  if(moonA>0.01){
+    const moonX=cx+Math.cos(angle+Math.PI)*rx;
+    const moonY=cy- Math.sin(angle+Math.PI)*ry;
+    drawMoonCrescent(moonX,moonY,moonA,0.56,-0.18);
   }
+
+  // landscape
+  drawMountainsAndGrass(dt);
+
+  // kontras skor
+  scoreEl.style.color=(brightness<0.55)?'#fff':'#0b1222';
+  scoreEl.style.textShadow=(brightness<0.55)?'0 1px 2px rgba(0,0,0,.6)':'0 1px 2px rgba(255,255,255,.25)';
+}
 
   // Debug helpers
   window.clockFreeze = on => { window.__freeze = !!on; };
