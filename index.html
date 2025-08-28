@@ -334,37 +334,50 @@ function renderBackground(){
   const sunX  = cx + Math.cos(angle) * rx;
   const sunY  = cy - Math.sin(angle) * ry;
 
-  // ketinggian → brightness (halus)
-  const rawElev   = (cy - sunY) / (H * 0.45);
-  const elevNorm  = clamp(rawElev, 0, 1);
-  const daylight  = smooth01(elevNorm);
-  const sunriseBoost = remapSmooth(rawElev, -0.15, 0.08) * 0.35;
-  brightness = clamp(daylight * 0.92 + sunriseBoost + 0.06, 0, 1);
+  // --- elevasi & brightness (lebih halus) ---
+  const rawElev  = (cy - sunY) / (H * 0.45); // <0 di bawah horizon, >0 di atas
+  const elev01   = clamp(rawElev, 0, 1);
+  const easeInOutCubic = t => t<0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
+  const dayCore  = easeInOutCubic(elev01);            // inti siang halus
+  const dawnHelp = remapSmooth(rawElev, -0.22, 0.10); // bantu subuh
+  brightness = clamp(0.78*dayCore + 0.22*dawnHelp, 0, 1);
 
-  // warna dasar
-  const nightTop = '#0a0f1e', nightBot = '#121a2c';
-  const dayTop   = '#9fd6ff', dayBot   = '#eef4ff';
+  // warna dasar siang ↔ malam
+  const nightTop='#0a0f1e', nightBot='#121a2c';
+  const dayTop  ='#9fd6ff', dayBot  ='#eef4ff';
   let skyTop = mixColor(nightTop, dayTop, brightness);
   let skyBot = mixColor(nightBot, dayBot, brightness);
 
-  // tint horizon (senja & subuh)
-  const nearH   = clamp(1 - Math.abs(rawElev) / 0.30, 0, 1);
-  const above   = clamp(rawElev,  0, 1);
-  const below   = clamp(-rawElev, 0, 1);
-  const sunsetMix = nearH * smooth01(1 - clamp(above / 0.22, 0, 1));
-  const dawnMix   = nearH * smooth01(1 - clamp(below / 0.22, 0, 1));
+  // --- tint horizon (gaussian di sekitar 0 -> jingga yang nyata) ---
+  const gauss = (x,s)=>Math.exp(-(x*x)/(2*s*s));
+  const above = clamp(rawElev,  0, 1);
+  const below = clamp(-rawElev, 0, 1);
+
+  // kekuatan jingga saat senja (puncak di rawElev≈0.06 lalu turun)
+  const sunsetK = gauss(rawElev-0.06, 0.10) * above;     // hanya saat di atas
+  // kebiruan subuh (puncak di rawElev≈-0.06)
+  const dawnK   = gauss(rawElev+0.06, 0.12) * below;     // hanya saat di bawah
+
   const SUNSET = { top:'#ff9b5e', bot:'#ffd39a' };
   const DAWN   = { top:'#244b9a', bot:'#3e74c9' };
-  if (sunsetMix > 0){ const k=Math.min(1,sunsetMix*1.6); skyTop=mixColor(skyTop,SUNSET.top,k); skyBot=mixColor(skyBot,SUNSET.bot,k); }
-  if (dawnMix   > 0){ const k=Math.min(1,dawnMix*1.0);   skyTop=mixColor(skyTop,DAWN.top,k);   skyBot=mixColor(skyBot,DAWN.bot,k);   }
 
+  // perkuat senja → jadi benar-benar jingga
+  skyTop = mixColor(skyTop, SUNSET.top, Math.min(1, sunsetK*1.8));
+  skyBot = mixColor(skyBot, SUNSET.bot, Math.min(1, sunsetK*1.8));
+  // subuh lembut kebiruan
+  skyTop = mixColor(skyTop, DAWN.top,   Math.min(1, dawnK*1.0));
+  skyBot = mixColor(skyBot, DAWN.bot,   Math.min(1, dawnK*1.0));
+
+  // gambar langit
   drawSky(skyTop, skyBot);
 
+  // bintang & awan
   const starAlpha = 1 - remapSmooth(rawElev, -0.10, 0.02);
   if (starAlpha > 0.02) drawStars(starAlpha);
   const cloudA = 0.20 + 0.75 * brightness;
   drawClouds(cloudOffset1, cloudOffset2, cloudA);
 
+  // matahari / bulan
   const sunA  = remapSmooth(rawElev,  0.02, 0.14);
   const moonA = 1 - remapSmooth(rawElev, -0.06, 0.10);
   if (sunA  > 0.01) drawSun(sunX, sunY, sunA);
@@ -374,8 +387,10 @@ function renderBackground(){
     drawMoonCrescent(moonX, moonY, moonA, 0.56, -0.18);
   }
 
+  // pegunungan & rumput mengikuti brightness
   drawMountainsAndGrass(dt);
 
+  // visibilitas skor
   scoreEl.style.color = (brightness < 0.55) ? '#fff' : '#0b1222';
   scoreEl.style.textShadow = (brightness < 0.55)
     ? '0 1px 2px rgba(0,0,0,.6)'
@@ -431,10 +446,11 @@ function makeBrickSurface(w,h){
   oc.height = Math.max(1,h|0);
   const c = oc.getContext('2d');
 
-  // isi bata (origin 0,0) → tidak ikut geser pipa
+  // isi bata (origin 0,0) → tidak ikut bergerak
   c.fillStyle = brickPattern;
   c.fillRect(0,0,oc.width,oc.height);
 
+  // shading pinggir
   const edge = c.createLinearGradient(0,0,oc.width,0);
   edge.addColorStop(0,'rgba(0,0,0,.28)');
   edge.addColorStop(0.10,'rgba(0,0,0,0)');
@@ -442,23 +458,26 @@ function makeBrickSurface(w,h){
   edge.addColorStop(1,'rgba(0,0,0,.28)');
   c.fillStyle = edge; c.fillRect(0,0,oc.width,oc.height);
 
-  const dim = 0.45 * (1 - (typeof brightness==='number'?brightness:1));
-  if (dim>0){ c.fillStyle = `rgba(0,0,0,${dim.toFixed(3)})`; c.fillRect(0,0,oc.width,oc.height); }
-
+  // garis tepi
   c.lineWidth = 2;
   c.strokeStyle = 'rgba(0,0,0,.35)';
   c.strokeRect(0.5,0.5,oc.width-1,oc.height-1);
 
   brickSurfCache.set(key, oc);
   return oc;
-}
-
+ }
 function drawBrickPipe(x,y,w,h){
   if (h<=0 || w<=0) return;
   const surf = makeBrickSurface(w,h);
   ctx.drawImage(surf, x, y);
-}
 
+  // satu overlay "dim" untuk SEMUA pipa sesuai brightness saat ini
+  const dim = 0.45 * (1 - (typeof brightness==='number'?brightness:1));
+  if (dim > 0){
+    ctx.fillStyle = `rgba(0,0,0,${dim.toFixed(3)})`;
+    ctx.fillRect(x,y,w,h);
+  }
+}
 /* ====================== DRAW ====================== */
 function draw(){
   ctx.clearRect(0,0,W,H);
