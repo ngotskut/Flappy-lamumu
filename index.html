@@ -23,6 +23,7 @@
   }
   #startPanel h2{margin:6px 0 8px;font-size:22px}
   .muted{color:#4b5563;font-size:12px}
+
   #charRow{display:flex;gap:12px;align-items:stretch;overflow-x:auto;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;padding-bottom:4px;margin-top:10px}
   #charRow::-webkit-scrollbar{height:0} #charRow{scrollbar-width:none}
   .card{flex:0 0 160px;border:1px solid #e5e7eb;border-radius:12px;padding:10px 10px 12px;text-align:center;background:#fff}
@@ -30,13 +31,17 @@
   #startPanel .card .muted{display:none!important}
   #startPanel .card div:last-child{font-size:0;line-height:1}
   #startPanel .card div:last-child input[type="radio"]{transform:scale(1.35);vertical-align:middle}
+
   .actions{display:flex;gap:10px;justify-content:center;margin-top:12px}
   .btn{appearance:none;border:0;border-radius:999px;padding:10px 16px;font-weight:600;background:#e5e7eb;cursor:pointer}
   .btn.primary{background:var(--brand);color:#fff}
   .btn[disabled]{opacity:.45;cursor:not-allowed}
+
   input[type="text"]{width:100%;max-width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;background:#fff;font-size:14px}
   input[type="text"].invalid{border-color:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.15)}
+
   #nameErr{display:none;color:#ef4444;font-size:12px;margin-top:6px}
+
   #lbPanel h3{font-size:16px}
   #lbList table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:14px}
   #lbList thead th,#lbList tbody td{padding:10px 14px;border-bottom:1px solid #eef2f7;vertical-align:middle;white-space:nowrap}
@@ -82,8 +87,9 @@
 
 <script>
 (() => {
- console.log('FLAPPY BUILD = bricks-v10');
-document.title = 'Flappy Lamumu • bricks-v10';
+  console.log('FLAPPY BUILD = bricks-v10');
+  document.title = 'Flappy Lamumu • bricks-v10';
+
 /* ========================= GAME CORE ========================= */
 const CHAR_SRCS=['assets/lamumu1.png','assets/lamumu2.png','assets/lamumu3.png','assets/lamumu4.png'];
 const BONUS_SRC='assets/bonus.png';
@@ -117,7 +123,10 @@ validateName();
 
 let W=0,H=0,DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
 
-// ganti const → let dan inisialisasi koson
+/* === Brick pattern cache (global) === */
+let brickPattern = null;
+
+/* === PIPE dynamic (hanya SATU definisi) === */
 let PIPE = { width:0, gapBase:0, spawnMin:0, spawnMax:0 };
 
 function resize(){
@@ -140,7 +149,6 @@ addEventListener('resize',resize,{passive:true}); resize();
 const state={running:false, score:0, time:0, speedBase:190, speedMax:420, speed:190, pipesPassed:0, speedPerPipe:2.2, gravity:900, flapVel:-400, charIndex:0};
 
 const pipes=[];
-const PIPE={width:Math.max(80,(W*0.08)|0), gapBase:Math.max(160,(H*0.28)|0), spawnMin:Math.max(240,(W*0.36)|0), spawnMax:Math.max(280,(W*0.42)|0)};
 const bonuses=[];
 const BONUS={ sizeBase: Math.max(34,(Math.min(W,H)*0.1)|0), rotateSpeed:2.0, chance:0.65, yOffset:20 };
 const player={ x:Math.max(80,(W*0.18)|0), y:(H*0.45)|0, vy:0, r:Math.max(22,(Math.min(W,H)*0.024)|0), sprite:null };
@@ -339,7 +347,7 @@ function renderBackground(){
   let skyTop = mixColor(nightTop, dayTop, brightness);
   let skyBot = mixColor(nightBot, dayBot, brightness);
 
-  // Tint sunset/dawn (boleh kamu tweak lagi nanti)
+  // tint horizon: hangat saat sunset, biru saat subuh
   const nearH   = clamp(1 - Math.abs(rawElev) / 0.30, 0, 1);
   const above   = clamp(rawElev,  0, 1);
   const below   = clamp(-rawElev, 0, 1);
@@ -372,9 +380,9 @@ function renderBackground(){
   scoreEl.style.textShadow = (brightness < 0.55)
     ? '0 1px 2px rgba(0,0,0,.6)'
     : '0 1px 2px rgba(255,255,255,.25)';
-} // ← penting: renderBackground ditutup di sini
+} // end renderBackground
 
-/* === PIPE: Brick pattern & renderer ===================================== */
+/* === PIPE: Brick pattern & renderer ========================= */
 const PIPE_BRICK = {
   brick:       '#c04d35',
   brickShadow: '#9f3b29',
@@ -396,10 +404,8 @@ function makeBrickPattern(scale = 1){
     const g = c.createLinearGradient(x, y, x, y+h);
     g.addColorStop(0, PIPE_BRICK.brick);
     g.addColorStop(1, PIPE_BRICK.brickShadow);
-    c.fillStyle = g;
-    c.fillRect(x, y, w, h);
-    c.fillStyle = 'rgba(255,255,255,.06)';
-    c.fillRect(x, y, w, 1*scale);
+    c.fillStyle = g; c.fillRect(x, y, w, h);
+    c.fillStyle = 'rgba(255,255,255,.06)'; c.fillRect(x, y, w, 1*scale);
   };
 
   const bw = tileW-gap, bh = tileH-gap;
@@ -423,12 +429,10 @@ function drawBrickPipe(x,y,w,h){
   }
   ctx.save();
   if (brickPattern.setTransform){
-    const m = new DOMMatrix();
-    m.e = -x; m.f = -y;
+    const m = new DOMMatrix(); m.e = -x; m.f = -y;
     brickPattern.setTransform(m);
   }
-  ctx.fillStyle = brickPattern;
-  ctx.fillRect(x,y,w,h);
+  ctx.fillStyle = brickPattern; ctx.fillRect(x,y,w,h);
 
   const edge = ctx.createLinearGradient(x,y,x+w,y);
   edge.addColorStop(0,'rgba(0,0,0,.28)');
@@ -438,17 +442,14 @@ function drawBrickPipe(x,y,w,h){
   ctx.fillStyle = edge; ctx.fillRect(x,y,w,h);
 
   const dim = 0.45 * (1 - (typeof brightness==='number'?brightness:1));
-  if (dim>0){
-    ctx.fillStyle = `rgba(0,0,0,${dim.toFixed(3)})`;
-    ctx.fillRect(x,y,w,h);
-  }
+  if (dim>0){ ctx.fillStyle = `rgba(0,0,0,${dim.toFixed(3)})`; ctx.fillRect(x,y,w,h); }
+
   ctx.lineWidth = 2;
   ctx.strokeStyle = 'rgba(0,0,0,.35)';
   ctx.strokeRect(x+0.5,y+0.5,w-1,h-1);
   ctx.restore();
 }
-
-// untuk debug cepat di Console
+// untuk debug cepat
 window.drawBrickPipe = drawBrickPipe;
 
 /* ====================== DRAW ====================== */
@@ -456,7 +457,7 @@ function draw(){
   ctx.clearRect(0,0,W,H);
   renderBackground();
 
-  // PIPES: pakai bata
+  // PIPES (brick)
   for(const p of pipes){
     drawBrickPipe(p.x, 0,           p.width, p.y);
     drawBrickPipe(p.x, p.y+p.gap,   p.width, H-(p.y+p.gap));
@@ -465,12 +466,12 @@ function draw(){
   // BONUS
   for(const b of bonuses){
     ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(b.angle);
-    const s=b.size; if(bonusImg.complete && bonusImg.naturalWidth) ctx.drawImage(bonusImg,-s/2,-s/2,s,s);
+    const s=b.size;
+    if(bonusImg.complete && bonusImg.naturalWidth) ctx.drawImage(bonusImg,-s/2,-s/2,s,s);
     else { ctx.fillStyle='#ff3b3b'; ctx.beginPath(); ctx.arc(0,0,s/2,0,Math.PI*2); ctx.fill(); }
     ctx.restore();
   }
 
-// --- baru setelah itu gambar BONUS & PLAYER ---
   // PLAYER
   if(state.running){
     const s=player.r*2.2*1.15;
@@ -511,7 +512,7 @@ if(bgm){
   window.addEventListener('keydown',unlockBgm,{once:true,passive:true});
 }
 
-/* ====== DEBUG HOOKS (opsional) ====== */
+/* ====== DEBUG HOOKS ====== */
 window.clockFreeze = on => { window.__freeze = !!on; };
 window.setNoon     = ()=>{ dayClock = 0.50 * DAY_MS; };
 window.setSunset   = ()=>{ dayClock = 0.75 * DAY_MS; };
