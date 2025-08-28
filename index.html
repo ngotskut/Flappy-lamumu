@@ -4,30 +4,38 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <title>Flappy Lamumu</title>
+<script defer src="/_vercel/insights/script.js"></script>
 <style>
   *,*::before,*::after{ box-sizing:border-box }
   :root{ --ui-bg:rgba(255,255,255,.96); --ui-radius:18px; --brand:#2563eb; }
   html,body{height:100%;margin:0}
   body{background:#6b8f99;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;overflow:hidden}
   #wrap{position:fixed;inset:0}
-  #game{position:absolute;inset:0;display:block;background:#9bd3ff}
-  #score{
-    position:absolute;top:8px;left:50%;transform:translateX(-50%);
-    font-weight:700;font-size:16px;pointer-events:none;color:#0b1222;text-shadow:0 1px 2px rgba(255,255,255,.25)
-  }
+  #game{position:absolute;inset:0;display:block;background:linear-gradient(#cfefff,#bde6fd)}
+  #score{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-weight:700;font-size:16px;pointer-events:none}
 
   #overlay{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:8}
   #startPanel{
     width:min(680px,92vw);background:var(--ui-bg);backdrop-filter:saturate(1.2) blur(8px);
-    border-radius:var(--ui-radius);box-shadow:0 20px 60px rgba(0,0,0,.35);padding:22px 20px;z-index:9;text-align:center
+    border-radius:var(--ui-radius);box-shadow:0 20px 60px rgba(0,0,0,.35);padding:22px 20px;z-index:9;
+    text-align:center;
   }
   #startPanel h2{margin:6px 0 8px;font-size:22px}
   .muted{color:#4b5563;font-size:12px}
 
-  #charRow{display:flex;gap:12px;align-items:stretch;overflow-x:auto;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;padding-bottom:4px;margin-top:10px}
-  #charRow::-webkit-scrollbar{height:0} #charRow{scrollbar-width:none}
+  #charRow{
+    display:flex; gap:12px; align-items:stretch;
+    overflow-x:auto; -webkit-overflow-scrolling:touch; scroll-behavior:smooth;
+    padding-bottom:4px; margin-top:10px;
+  }
+  #charRow::-webkit-scrollbar{height:0}
+  #charRow{scrollbar-width:none}
 
-  .card{flex:0 0 160px;border:1px solid #e5e7eb;border-radius:12px;padding:10px 10px 12px;text-align:center;background:#fff}
+  .card{
+    flex:0 0 160px;
+    border:1px solid #e5e7eb;border-radius:12px;padding:10px 10px 12px;
+    text-align:center;background:#fff
+  }
   .card img{width:72px;height:72px;object-fit:contain;display:block;margin:4px auto 8px}
 
   #startPanel .card .muted{display:none!important}
@@ -39,9 +47,41 @@
   .btn.primary{background:var(--brand);color:#fff}
   .btn[disabled]{opacity:.45;cursor:not-allowed}
 
-  input[type="text"]{width:100%;max-width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;background:#fff;font-size:14px}
+  input[type="text"]{
+    width:100%;max-width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;background:#fff;font-size:14px
+  }
   input[type="text"].invalid{border-color:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.15)}
   #nameErr{display:none;color:#ef4444;font-size:12px;margin-top:6px}
+
+  #lbPanel h3{font-size:16px}
+  #lbList table{
+    width:100%;
+    border-collapse:collapse;
+    table-layout:fixed;
+    font-size:14px;
+  }
+  #lbList thead th,
+  #lbList tbody td{
+    padding:10px 14px;
+    border-bottom:1px solid #eef2f7;
+    vertical-align:middle;
+    white-space:nowrap;
+  }
+  #lbList thead th:nth-child(1),
+  #lbList tbody td:nth-child(1){
+    width:52px;text-align:center;
+  }
+  #lbList thead th:nth-child(2),
+  #lbList tbody td:nth-child(2){
+    width:auto;text-align:left;
+  }
+  #lbList thead th:nth-child(3),
+  #lbList tbody td:nth-child(3){
+    width:96px;text-align:right;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum" 1, "lnum" 1;
+  }
+  #lbList thead th{background:#f6f8fb;font-weight:700}
 </style>
 </head>
 <body>
@@ -60,14 +100,27 @@
       </div>
 
       <div id="charRow" aria-label="Choose character">
-        <label class="card"><img src="assets/lamumu1.png" alt="Lamumu 1"><div><input type="radio" name="char" value="0" checked></div></label>
-        <label class="card"><img src="assets/lamumu2.png" alt="Lamumu 2"><div><input type="radio" name="char" value="1"></div></label>
-        <label class="card"><img src="assets/lamumu3.png" alt="Lamumu 3"><div><input type="radio" name="char" value="2"></div></label>
-        <label class="card"><img src="assets/lamumu4.png" alt="Lamumu 4"><div><input type="radio" name="char" value="3"></div></label>
+        <label class="card">
+          <img src="assets/lamumu1.png" alt="Lamumu 1">
+          <div><input type="radio" name="char" value="0" checked></div>
+        </label>
+        <label class="card">
+          <img src="assets/lamumu2.png" alt="Lamumu 2">
+          <div><input type="radio" name="char" value="1"></div>
+        </label>
+        <label class="card">
+          <img src="assets/lamumu3.png" alt="Lamumu 3">
+          <div><input type="radio" name="char" value="2"></div>
+        </label>
+        <label class="card">
+          <img src="assets/lamumu4.png" alt="Lamumu 4">
+          <div><input type="radio" name="char" value="3"></div>
+        </label>
       </div>
 
       <div class="actions">
         <button id="btnStart" class="btn primary" disabled>Start</button>
+        <button id="btnLb" class="btn" type="button">Leaderboard</button>
       </div>
       <div class="muted" style="text-align:center;margin-top:6px">Tip: You can change character during play by pressing <b>C</b>.</div>
     </div>
@@ -79,299 +132,401 @@
 
 <script>
 (() => {
-/* ====================== SETUP DASAR ====================== */
-const CHAR_SRCS=['assets/lamumu1.png','assets/lamumu2.png','assets/lamumu3.png','assets/lamumu4.png'];
-const BONUS_SRC='assets/bonus.png';
+  /* ====== GAME & LB (tetap) ====== */
+  const CHAR_SRCS = ['assets/lamumu1.png','assets/lamumu2.png','assets/lamumu3.png','assets/lamumu4.png'];
+  const BONUS_SRC = 'assets/bonus.png';
 
-const canvas=document.getElementById('game');
-const ctx=canvas.getContext('2d');
-const scoreEl=document.getElementById('score');
-const overlay=document.getElementById('overlay');
-const btnStart=document.getElementById('btnStart');
-const nameInput=document.getElementById('playerName');
-const nameErr=document.getElementById('nameErr');
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const scoreEl = document.getElementById('score');
+  const overlay = document.getElementById('overlay');
+  const btnStart = document.getElementById('btnStart');
+  const nameInput = document.getElementById('playerName');
+  const nameErr = document.getElementById('nameErr');
 
-nameInput.value=localStorage.getItem('lamumu_name')||'';
-const MIN_NAME=3;
-function validateName(){const ok=(nameInput.value.trim().length>=MIN_NAME);btnStart.disabled=!ok;nameInput.classList.toggle('invalid',!ok);nameErr.style.display=ok?'none':'block';return ok;}
-nameInput.addEventListener('input',validateName); nameInput.addEventListener('blur',validateName); validateName();
+  const startPanel = document.getElementById('startPanel');
+  const btnLb = document.getElementById('btnLb');
+  const lbPanel = document.createElement('div');
+  lbPanel.id = 'lbPanel';
+  lbPanel.style.marginTop = '14px';
+  lbPanel.style.display = 'none';
+  lbPanel.innerHTML = `
+    <h3 style="margin:0 0 8px">Top 100 Leaderboard</h3>
+    <div id="lbList" style="max-height:240px;overflow:auto;border:1px solid #e5e7eb;border-radius:10px;background:#fff">
+      <div class="muted" style="padding:10px">Loading…</div>
+    </div>`;
+  startPanel.appendChild(lbPanel);
+  const lbList = lbPanel.querySelector('#lbList');
 
-let W=0,H=0,DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
-function resize(){W=innerWidth|0;H=innerHeight|0;canvas.width=(W*DPR)|0;canvas.height=(H*DPR)|0;canvas.style.width=W+'px';canvas.style.height=H+'px';ctx.setTransform(DPR,0,0,DPR,0,0);}
-addEventListener('resize',resize,{passive:true}); resize();
+  nameInput.value = localStorage.getItem('lamumu_name') || '';
+  const MIN_NAME = 3;
+  function validateName(){
+    const ok = (nameInput.value.trim().length >= MIN_NAME);
+    btnStart.disabled = !ok;
+    nameInput.classList.toggle('invalid', !ok);
+    nameErr.style.display = ok ? 'none' : 'block';
+    return ok;
+  }
+  nameInput.addEventListener('input', validateName);
+  nameInput.addEventListener('blur', validateName);
+  validateName();
 
-/* ====================== STATE GAME ====================== */
-const state={running:false,score:0,time:0,speedBase:190,speedMax:420,speed:190,pipesPassed:0,speedPerPipe:2.2,gravity:900,flapVel:-400,charIndex:0};
-const pipes=[]; const bonuses=[];
-const PIPE={ width:Math.max(80,(W*0.08)|0), gapBase:Math.max(160,(H*0.28)|0), spawnMin:Math.max(240,(W*0.36)|0), spawnMax:Math.max(280,(W*0.42)|0) };
-const BONUS={ sizeBase:Math.max(34,(Math.min(W,H)*0.10)|0), rotateSpeed:2.0, chance:0.65, yOffset:20 };
-const player={ x:Math.max(80,(W*0.18)|0), y:(H*0.45)|0, vy:0, r:Math.max(22,(Math.min(W,H)*0.024)|0), sprite:null };
+  let W=0,H=0,DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
+  function resize(){ W=innerWidth|0; H=innerHeight|0;
+    canvas.width=(W*DPR)|0; canvas.height=(H*DPR)|0; canvas.style.width=W+'px'; canvas.style.height=H+'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+  }
+  addEventListener('resize',resize,{passive:true}); resize();
 
-const charImgs=CHAR_SRCS.map(s=>{const im=new Image(); im.src=s; return im;});
-const bonusImg=new Image(); bonusImg.src=BONUS_SRC;
+  const state = {
+    running:false, score:0, time:0,
+    speedBase:190, speedMax:420, speed:190,
+    pipesPassed:0, speedPerPipe:2.2,
+    gravity:900, flapVel:-400, charIndex:0,
+  };
 
-function flap(){ if(state.running){ player.vy=state.flapVel; } }
-canvas.addEventListener('mousedown',flap);
-canvas.addEventListener('touchstart',e=>{e.preventDefault();flap();},{passive:false});
-addEventListener('keydown',e=>{
-  if(e.code==='Space'){ e.preventDefault(); flap(); }
-  if(e.key==='c'||e.key==='C'){ state.charIndex=(state.charIndex+1)%charImgs.length; player.sprite=charImgs[state.charIndex];}
-});
+  const pipes=[];
+  const PIPE = {
+    width: Math.max(80,(W*0.08)|0),
+    gapBase: Math.max(160,(H*0.28)|0),
+    spawnMin: Math.max(240,(W*0.36)|0),
+    spawnMax: Math.max(280,(W*0.42)|0)
+  };
 
-btnStart.addEventListener('click',()=>{ if(validateName()) startGame(); });
+  const bonuses=[];
+  const BONUS={ sizeBase: Math.max(34,(Math.min(W,H)*0.1)|0), rotateSpeed:2.0, chance:0.65, yOffset:20 };
 
-function startGame(){
-  localStorage.setItem('lamumu_name', nameInput.value.trim());
-  const sel=document.querySelector('input[name="char"]:checked'); state.charIndex=sel?+sel.value:0;
-  player.sprite=charImgs[state.charIndex];
-  state.running=true; state.score=0; state.time=0; state.pipesPassed=0; state.speed=state.speedBase;
-  player.x=Math.max(80,(W*0.18)|0); player.y=(H*0.45)|0; player.vy=0;
-  pipes.length=0; bonuses.length=0;
-  overlay.style.display='none';
-}
+  const player={ x:Math.max(80,(W*0.18)|0), y:(H*0.45)|0, vy:0, r:Math.max(22,(Math.min(W,H)*0.024)|0), sprite:null };
 
-/* ====================== UTIL ====================== */
-const rand=(a,b)=>a+Math.random()*(b-a);
-const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-const smooth01=t=>t*t*(3-2*t);
-const remapSmooth=(x,a,b)=>smooth01(clamp((x-a)/(b-a),0,1));
-const lerp=(a,b,t)=>a+(b-a)*t;
-function hexToRgb(h){const p=n=>parseInt(n,16);return[p(h.slice(1,3)),p(h.slice(3,5)),p(h.slice(5,7))];}
-function mixColor(h1,h2,t){const [r1,g1,b1]=hexToRgb(h1),[r2,g2,b2]=hexToRgb(h2);const r=(r1+(r2-r1)*t)|0,g=(g1+(g2-g1)*t)|0,b=(b1+(b2-b1)*t)|0;return`rgb(${r},${g},${b})`;}
+  const charImgs = CHAR_SRCS.map(s=>{const im=new Image(); im.src=s; return im;});
+  const bonusImg = new Image(); bonusImg.src=BONUS_SRC;
 
-/* ====================== BACKGROUND: ORBIT & SKY ====================== */
-const PHASE_MS=16000;               // 16s satu kuadran (siang/petang/malam/subuh)
-const DAY_MS  =PHASE_MS*4;
-const BG_PARALLAX=0.15;
-const START_AT_NOON=0.5;            // mulai dari siang
+  function flap(){ if(state.running){ player.vy=state.flapVel; } }
+  canvas.addEventListener('mousedown',flap);
+  canvas.addEventListener('touchstart',e=>{e.preventDefault();flap();},{passive:false});
+  addEventListener('keydown',e=>{
+    if(e.code==='Space'){ e.preventDefault(); flap(); }
+    if(e.key==='c'||e.key==='C'){ state.charIndex=(state.charIndex+1)%charImgs.length; player.sprite=charImgs[state.charIndex];}
+  });
 
-let cloudOffset1=0, cloudOffset2=0;
-let dayClock=START_AT_NOON*DAY_MS;
-let bgTLast=performance.now();
-let brightness=1; // 0..1 (dipakai juga untuk kontras skor)
+  btnStart.addEventListener('click',() => { if (validateName()) startGame(); });
+  btnLb.addEventListener('click', openLeaderboard);
 
-const STARS=Array.from({length:120},()=>({x:Math.random(),y:Math.random()*0.6,tw:0.6+Math.random()*0.5}));
-
-function drawSky(top,bottom){const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,top);g.addColorStop(1,bottom);ctx.fillStyle=g;ctx.fillRect(0,0,W,H);}
-function drawClouds(off1,off2){
-  // alpha awan mengikuti terang (malam makin transparan)
-  const a = lerp(0.35, 0.95, brightness);
-  ctx.save(); ctx.globalAlpha=a;
-  const cloud=(x,y,s)=>{ctx.beginPath();ctx.fillStyle='rgba(255,255,255,0.95)';ctx.arc(x,y,s,0,Math.PI*2);ctx.arc(x+s*0.8,y+s*0.2,s*0.9,0,Math.PI*2);ctx.arc(x-s*0.7,y+s*0.25,s*0.75,0,Math.PI*2);ctx.fill();};
-  const y1=H*0.18,y2=H*0.28;
-  for(let i=-1;i<=4;i++) cloud((i*0.35*W)+(off1%W),y1,Math.min(W,H)*0.07);
-  ctx.globalAlpha=a*0.85;
-  for(let i=-1;i<=4;i++) cloud((i*0.50*W)+(off2%W),y2,Math.min(W,H)*0.055);
-  ctx.restore();
-}
-function drawSun(x,y,a){
-  const R=Math.min(W,H)*0.08;
-  ctx.save(); ctx.globalAlpha=a;
-  // core
-  ctx.fillStyle='#FFD166'; ctx.beginPath(); ctx.arc(x,y,R,0,Math.PI*2); ctx.fill();
-  // glow/halo
-  const g=ctx.createRadialGradient(x,y,R*0.25,x,y,R*1.7);
-  g.addColorStop(0,'rgba(255,209,102,0.85)');
-  g.addColorStop(1,'rgba(255,209,102,0)');
-  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,R*1.7,0,Math.PI*2); ctx.fill();
-  ctx.restore();
-}
-function drawMoonCrescent(x,y,a,thin=0.56,tilt=-0.18){
-  const R=Math.min(W,H)*0.06;
-  ctx.save(); ctx.translate(x,y); ctx.rotate(tilt); ctx.globalAlpha=a;
-  ctx.globalCompositeOperation='source-over';
-  ctx.fillStyle='#EFF3FA'; ctx.beginPath(); ctx.arc(0,0,R,0,Math.PI*2); ctx.fill();
-  ctx.globalCompositeOperation='destination-out';
-  ctx.beginPath(); ctx.ellipse(R*0.55,-R*0.06,R*thin,R*thin*0.98,0,0,Math.PI*2); ctx.fill();
-  ctx.globalCompositeOperation='lighter';
-  const g=ctx.createRadialGradient(-R*0.15,0,R*0.25,-R*0.15,0,R*1.1);
-  g.addColorStop(0,'rgba(255,255,255,0.12)'); g.addColorStop(1,'rgba(255,255,255,0)');
-  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(-R*0.15,0,R*1.1,0,Math.PI*2); ctx.fill();
-  ctx.restore();
-}
-function drawStars(alpha){ctx.save();ctx.fillStyle='#e8eefc';for(const s of STARS){const tw=0.6+Math.sin(performance.now()/400*s.tw)*0.4;ctx.globalAlpha=alpha*tw;ctx.fillRect(s.x*W,s.y*H,1.6,1.6);}ctx.restore();}
-
-function renderBackground(){
-  const now=performance.now();
-  const dt=Math.min(0.05,(now-bgTLast)/1000);
-  bgTLast=now;
-  if(!window.__freeze) dayClock=(dayClock+dt*1000)%DAY_MS;
-
-  const prog=(dayClock%DAY_MS)/DAY_MS;
-
-  // 1) Orbit elips matahari/bulan (tetap)
-  const cx=W*0.5, cy=H*0.62;
-  const rx=W*0.42, ry=H*0.36;
-  const angle=(prog-0.25)*2*Math.PI;
-  const sunX=cx+Math.cos(angle)*rx;
-  const sunY=cy- Math.sin(angle)*ry; // minus agar atas bernilai kecil (layar koordinat)
-
-  // =========================================
-  // 2) Elevasi & Brightness (PERBAIKAN INTI)
-  //    Pakai sinus murni: -1..+1 (independen dari H/ry)
-  //    Setelah itu pakai sigmoid supaya begitu > horizon langsung terang.
-  // =========================================
-  const elevSin = Math.sin(angle); // -1..+1
-  // Sigmoid: offset 0.02 (sedikit di atas horizon), k=7 (kemiringan)
-  const sigmoid = (x,k=7,offset=0.02) => 1/(1+Math.exp(-k*(x-offset)));
-  const bright01 = sigmoid(elevSin);            // 0..1
-  // batas bawah kecil di malam hari agar tidak hitam pekat
-  brightness = lerp(0.12, 1.0, bright01);      // siang mendekati 1, malam ~0.12
-
-  // 3) Warna langit dasar (lebih cerah sedikit)
-  const nightTop='#0a0f1e', nightBot='#121a2c';
-  const dayTop  ='#7fd0ff', dayBot  ='#d8f2ff';
-  let skyTop=mixColor(nightTop,dayTop,brightness);
-  let skyBot=mixColor(nightBot,dayBot,brightness);
-
-  // 4) Tinta senja/subuh (pakai elevSin langsung)
-  const gauss=(x,s)=>Math.exp(-(x*x)/(2*s*s));
-  // sunset saat elevSin sedikit positif (tepat di atas horizon)
-  const sunsetK = gauss(elevSin-0.05,0.16) * Math.max(0,elevSin);
-  // dawn saat elevSin sedikit negatif (tepat di bawah horizon)
-  const dawnK   = gauss(elevSin+0.05,0.18) * Math.max(0,-elevSin);
-
-  const SUNSET={ top:'#ff9b5e', bot:'#ffd39a' };
-  const DAWN  ={ top:'#244b9a', bot:'#3e74c9' };
-  skyTop=mixColor(skyTop,SUNSET.top,Math.min(1,sunsetK*2.0));
-  skyBot=mixColor(skyBot,SUNSET.bot,Math.min(1,sunsetK*2.0));
-  skyTop=mixColor(skyTop,DAWN.top,  Math.min(1,dawnK*1.2));
-  skyBot=mixColor(skyBot,DAWN.bot,  Math.min(1,dawnK*1.2));
-
-  // 5) Gambar langit
-  drawSky(skyTop,skyBot);
-
-  // 6) Bintang & awan (ambang disesuaikan ke elevSin)
-  const starAlpha = 1 - remapSmooth(elevSin, -0.08, 0.06); // hilang sedikit sebelum sunrise
-  if(starAlpha>0.02) drawStars(starAlpha);
-  drawClouds(cloudOffset1,cloudOffset2);
-
-  // 7) Matahari & Bulan (pakai elevSin)
-  const sunA  = remapSmooth(elevSin,  0.00, 0.12);  // muncul tepat di horizon
-  const moonA = remapSmooth(-elevSin, 0.00, 0.18);  // muncul saat di bawah horizon
-  if(sunA>0.01)  drawSun(sunX,sunY,sunA);
-  if(moonA>0.01){
-    const moonX=cx+Math.cos(angle+Math.PI)*rx;
-    const moonY=cy- Math.sin(angle+Math.PI)*ry;
-    drawMoonCrescent(moonX,moonY,moonA,0.56,-0.18);
+  function startGame(){
+    localStorage.setItem('lamumu_name', nameInput.value.trim());
+    const sel=document.querySelector('input[name="char"]:checked'); state.charIndex=sel?+sel.value:0;
+    player.sprite=charImgs[state.charIndex];
+    state.running=true; state.score=0; state.time=0; state.pipesPassed=0; state.speed=state.speedBase;
+    player.x=Math.max(80,(W*0.18)|0); player.y=(H*0.45)|0; player.vy=0;
+    pipes.length=0; bonuses.length=0;
+    overlay.style.display='none';
   }
 
-  // 8) Kontras skor
-  scoreEl.style.color=(brightness<0.55)?'#fff':'#0b1222';
-  scoreEl.style.textShadow=(brightness<0.55)?'0 1px 2px rgba(0,0,0,.6)':'0 1px 2px rgba(255,255,255,.25)';
-}
-/* Debug hooks (dipakai di Console) */
-window.clockFreeze = on => { window.__freeze = !!on; };
-window.setNoon     = ()=>{ dayClock = 0.50 * DAY_MS; };
-window.setSunset   = ()=>{ dayClock = 0.75 * DAY_MS; };
-window.setMidnight = ()=>{ dayClock = 0.00 * DAY_MS; };
-window.setDawn     = ()=>{ dayClock = 0.25 * DAY_MS; };
+  const rand=(a,b)=>a+Math.random()*(b-a);
+  const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+  function needPipe(){ if(!pipes.length) return true; const last=pipes[pipes.length-1]; return (W-last.x) >= rand(PIPE.spawnMin,PIPE.spawnMax); }
+  function spawnPipe(){
+    const gap=PIPE.gapBase, top=rand(50, Math.max(50,H-gap-120));
+    const p={x:W+10,y:top,width:PIPE.width,gap,passed:false}; pipes.push(p);
+    if(Math.random()<BONUS.chance) spawnBonusAtPipe(p);
+  }
+  function spawnBonusAtPipe(p){
+    const mid = p.y + p.gap/2;
+    const y = clamp(mid + (Math.random()-0.5)*2*BONUS.yOffset, p.y+20, p.y+p.gap-20);
+    bonuses.push({x:p.x + PIPE.width + 120, y, size:BONUS.sizeBase, angle:0});
+  }
 
-/* ====================== GAME LOOP ====================== */
-let last=performance.now();
-requestAnimationFrame(function loop(now){
-  const dt=Math.min(0.033,(now-last)/1000); last=now;
-  if(state.running) update(dt);
-  draw(dt);
+  let last=performance.now();
+  function loop(now){
+    const dt=Math.min(0.033,(now-last)/1000); last=now;
+    if(state.running) update(dt);
+    draw(); requestAnimationFrame(loop);
+  }
   requestAnimationFrame(loop);
-});
 
-function needPipe(){ if(!pipes.length) return true; const last=pipes[pipes.length-1]; return (W-last.x) >= rand(PIPE.spawnMin,PIPE.spawnMax); }
-function spawnPipe(){ const gap=PIPE.gapBase, top=rand(50, Math.max(50,H-gap-120)); const p={x:W+10,y:top,width:PIPE.width,gap,passed:false}; pipes.push(p); if(Math.random()<BONUS.chance) spawnBonusAtPipe(p); }
-function spawnBonusAtPipe(p){ const mid=p.y+p.gap/2; const y=clamp(mid+(Math.random()-0.5)*2*BONUS.yOffset,p.y+20,p.y+p.gap-20); bonuses.push({x:p.x+PIPE.width+120,y,size:BONUS.sizeBase,angle:0}); }
+  function update(dt){
+    state.time+=dt;
+    state.speed = Math.min(state.speedMax, state.speedBase + state.pipesPassed*state.speedPerPipe);
 
-let lastDt=1/60;
-function update(dt){
-  lastDt=dt;
-  state.time+=dt;
-  state.speed=Math.min(state.speedMax, state.speedBase + state.pipesPassed*state.speedPerPipe);
-  if(needPipe()) spawnPipe();
+    if(needPipe()) spawnPipe();
 
-  for(let i=pipes.length-1;i>=0;i--){
-    const p=pipes[i]; p.x-=state.speed*dt;
-    if(p.x+p.width<-10) pipes.splice(i,1);
-    if(!p.passed && p.x+p.width<player.x){ p.passed=true; state.pipesPassed++; state.score+=1; }
+    for(let i=pipes.length-1;i>=0;i--){
+      const p=pipes[i]; p.x -= state.speed*dt;
+      if(p.x + p.width < -10) pipes.splice(i,1);
+      if(!p.passed && p.x + p.width < player.x){ p.passed=true; state.pipesPassed++; state.score += 1; }
+    }
+
+    player.vy += state.gravity*dt; player.y += player.vy*dt;
+
+    for(const p of pipes){
+      if(circleRect(player.x,player.y,player.r, p.x,0,p.width,p.y) ||
+         circleRect(player.x,player.y,player.r, p.x,p.y+p.gap,p.width,H-(p.y+p.gap))){ return gameOver(); }
+    }
+    if(player.y>H-2 || player.y<-20) return gameOver();
+
+    for(let i=bonuses.length-1;i>=0;i--){
+      const b=bonuses[i]; b.x -= state.speed*dt; b.angle += BONUS.rotateSpeed*dt;
+      if(dist(player.x,player.y,b.x,b.y) < (player.r + b.size*0.5*0.8)){ state.score += 100; bonuses.splice(i,1); continue; }
+      if(b.x < -80) bonuses.splice(i,1);
+    }
+
+    scoreEl.textContent='Score: '+state.score;
+
+    /* ===== [ADD PROC BG] parallax awan ===== */
+    lastDt = dt;
+    cloudOffset1 = (cloudOffset1 + state.speed * BG_PARALLAX * 0.50 * dt) % W;
+    cloudOffset2 = (cloudOffset2 + state.speed * BG_PARALLAX * 0.25 * dt) % W;
   }
 
-  player.vy+=state.gravity*dt; player.y+=player.vy*dt;
-
-  for(const p of pipes){
-    if(circleRect(player.x,player.y,player.r,p.x,0,p.width,p.y) ||
-       circleRect(player.x,player.y,player.r,p.x,p.y+p.gap,p.width,H-(p.y+p.gap))){ return gameOver(); }
-  }
-  if(player.y>H-2 || player.y<-20) return gameOver();
-
-  for(let i=bonuses.length-1;i>=0;i--){
-    const b=bonuses[i]; b.x-=state.speed*dt; b.angle += BONUS.rotateSpeed*dt;
-    if(dist(player.x,player.y,b.x,b.y) < (player.r + b.size*0.5*0.8)){ state.score+=100; bonuses.splice(i,1); continue; }
-    if(b.x<-80) bonuses.splice(i,1);
+  async function gameOver(){
+    state.running=false;
+    overlay.style.display='flex';
+    validateName();
+    try { const moo = document.getElementById('moo'); moo.currentTime = 0; await moo.play(); } catch(_) {}
+    try{ await saveScore((nameInput.value||'').trim(), state.score); }catch(e){ console.warn(e); }
+    openLeaderboard();
   }
 
-  scoreEl.textContent='Score: '+state.score;
-
-  // parallax awan ikut kecepatan game
-  cloudOffset1 = (cloudOffset1 + state.speed * BG_PARALLAX * 0.50 * dt) % W;
-  cloudOffset2 = (cloudOffset2 + state.speed * BG_PARALLAX * 0.25 * dt) % W;
-}
-
-function draw(dt){
-  ctx.clearRect(0,0,W,H);
-  renderBackground();
-
-  // pipes (biru sederhana)
-  ctx.fillStyle='#1f4fd1';
-  for(const p of pipes){
-    ctx.fillRect(p.x,0,p.width,p.y);
-    ctx.fillRect(p.x,p.y+p.gap,p.width,H-(p.y+p.gap));
+  async function saveScore(name, score){
+    if(!name || name.length<3) return;
+    await fetch('/api/leaderboard/submit', {
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ name, score })
+    });
   }
 
-  // bonus
-  for(const b of bonuses){
-    ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(b.angle);
-    const s=b.size; if(bonusImg.complete && bonusImg.naturalWidth) ctx.drawImage(bonusImg,-s/2,-s/2,s,s);
-    else { ctx.fillStyle='#ff3b3b'; ctx.beginPath(); ctx.arc(0,0,s/2,0,Math.PI*2); ctx.fill(); }
+  async function openLeaderboard(){
+    lbPanel.style.display='block';
+    lbList.innerHTML = '<div class="muted" style="padding:10px">Loading…</div>';
+    try{
+      const res = await fetch('/api/leaderboard/top?limit=100');
+      const data = await res.json();
+      const items = (Array.isArray(data?.items) ? data.items : data)
+        .filter(it => Number(it.score||0) > 0);
+      renderLeaderboard(items);
+    }catch(e){
+      lbList.innerHTML = '<div class="muted" style="padding:10px">Cannot load leaderboard.</div>';
+      console.warn('load leaderboard failed:', e);
+    }
+  }
+
+  function renderLeaderboard(items){
+    if(!items || !items.length){
+      lbList.innerHTML = '<div class="muted" style="padding:10px">No scores yet.</div>';
+      return;
+    }
+    const rows = items.map((it,i)=>`
+      <tr>
+        <td>${i+1}</td>
+        <td>${escapeHtml(it.name||'anonymous')}</td>
+        <td>${Number(it.score||0)}</td>
+      </tr>
+    `).join('');
+    lbList.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>#</th><th>Name</th><th>Score</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  }
+
+  /* =================== [ADD PROC BG] =================== */
+  const USE_PROCEDURAL_BG = true;
+  const BG_CYCLE_MS = 60000;
+  const BG_FADE_MS  = 1500;
+  const BG_PARALLAX = 0.15;
+
+  let currentBgIndex = 0;
+  let lastDt = 1/60;
+  let bgFadeMsLeft = 0;
+  let bgNextIndex  = 0;
+  let cloudOffset1 = 0, cloudOffset2 = 0;
+
+  const phases = [
+    { name:'morning', sky:['#FFEDD5','#FDE68A'], sunY:0.35, moon:false, stars:0 },
+    { name:'day',     sky:['#BEE3F8','#90CDF4'], sunY:0.22, moon:false, stars:0 },
+    { name:'dusk',    sky:['#FECACA','#FBCFE8'], sunY:0.45, moon:false, stars:20 },
+    { name:'night',   sky:['#0F172A','#1E293B'], sunY:0.80, moon:true,  stars:80 },
+  ];
+
+  const STARS = Array.from({length:120}, () => ({
+    x: Math.random(), y: Math.random()*0.6, tw: 0.5 + Math.random()*0.5
+  }));
+
+  setInterval(() => {
+    bgNextIndex  = (currentBgIndex + 1) % phases.length;
+    bgFadeMsLeft = BG_FADE_MS;
+  }, BG_CYCLE_MS);
+
+  function lerp(a,b,t){ return a+(b-a)*t; }
+  function lerpColor(c1,c2,t){
+    const p = n => parseInt(n,16);
+    const [r1,g1,b1] = [p(c1.slice(1,3)),p(c1.slice(3,5)),p(c1.slice(5,7))];
+    const [r2,g2,b2] = [p(c2.slice(1,3)),p(c2.slice(3,5)),p(c2.slice(5,7))];
+    return `rgb(${(r1+(r2-r1)*t)|0},${(g1+(g2-g1)*t)|0},${(b1+(b2-b1)*t)|0})`;
+  }
+  function drawGradientSky(topColor, bottomColor){
+    const g = ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0, topColor); g.addColorStop(1, bottomColor);
+    ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+  }
+  function drawSun(xNorm, yNorm, alpha=1){
+    const R = Math.min(W,H)*0.08;
+    ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = '#FFD166';
+    ctx.beginPath(); ctx.arc(xNorm*W, yNorm*H, R, 0, Math.PI*2); ctx.fill(); ctx.restore();
+  }
+  function drawMoon(xNorm, yNorm, alpha=1){
+    const R = Math.min(W,H)*0.06;
+    ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = '#E2E8F0';
+    ctx.beginPath(); ctx.arc(xNorm*W, yNorm*H, R, 0, Math.PI*2); ctx.fill();
+    ctx.globalAlpha = alpha*0.25; ctx.fillStyle = '#94A3B8';
+    for(let i=0;i<5;i++){
+      const r = R*(0.1+Math.random()*0.18), a = Math.random()*Math.PI*2, rr = R*0.55;
+      const cx = xNorm*W + Math.cos(a)*rr, cy = yNorm*H + Math.sin(a)*rr;
+      ctx.beginPath(); ctx.arc(cx,cy,r,0,Math.PI*2); ctx.fill();
+    }
+    ctx.restore();
+  }
+  function drawStars(alpha=1){
+    ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = '#E5E7EB';
+    for(const s of STARS){
+      const tw = 0.6 + Math.sin(performance.now()/400 * s.tw)*0.4;
+      ctx.globalAlpha = alpha*tw; ctx.fillRect(s.x*W, s.y*H, 2, 2);
+    }
+    ctx.restore();
+  }
+  function drawClouds(offset1, offset2, alpha=1){
+    ctx.save(); ctx.globalAlpha = alpha;
+    const baseY1 = H*0.18, baseY2 = H*0.28;
+    const cloud = (x,y,s) => {
+      ctx.beginPath(); ctx.fillStyle='rgba(255,255,255,0.85)';
+      ctx.arc(x, y, s, 0, Math.PI*2);
+      ctx.arc(x+s*0.8, y+ s*0.2, s*0.9, 0, Math.PI*2);
+      ctx.arc(x-s*0.7, y+ s*0.25, s*0.75, 0, Math.PI*2);
+      ctx.fill();
+    };
+    for(let i=-1;i<=4;i++){
+      const x = ((i*0.35*W) + (offset1%W));
+      cloud(x, baseY1, Math.min(W,H)*0.07);
+    }
+    ctx.globalAlpha = alpha*0.8;
+    for(let i=-1;i<=4;i++){
+      const x = ((i*0.5*W) + (offset2%W));
+      cloud(x, baseY2, Math.min(W,H)*0.055);
+    }
     ctx.restore();
   }
 
-  // player
-  if(state.running){
-    const s=player.r*2.2*1.15;
-    if(player.sprite && player.sprite.complete && player.sprite.naturalWidth){
-      ctx.drawImage(player.sprite, player.x-s/2, player.y-s/2, s, s);
-    }else{
-      ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(player.x,player.y,player.r,0,Math.PI*2); ctx.fill();
-      ctx.strokeStyle='#111'; ctx.lineWidth=2; ctx.stroke();
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+
+    // procedural background
+    const BG_ENABLED = USE_PROCEDURAL_BG;
+    if (BG_ENABLED){
+      let tFade = 0;
+      if (bgFadeMsLeft > 0){
+        tFade = 1 - (bgFadeMsLeft / BG_FADE_MS);
+        bgFadeMsLeft = Math.max(0, bgFadeMsLeft - lastDt*1000);
+      }
+      const cur = phases[currentBgIndex];
+      const nxt = phases[(currentBgIndex + (tFade>0 ? 1 : 0)) % phases.length];
+
+      const skyTop = tFade ? lerpColor(cur.sky[0], nxt.sky[0], tFade) : cur.sky[0];
+      const skyBot = tFade ? lerpColor(cur.sky[1], nxt.sky[1], tFade) : cur.sky[1];
+      drawGradientSky(skyTop, skyBot);
+
+      const dayX = ( (performance.now()/1000) * 0.03 ) % 2;
+      const xNorm = dayX>1 ? 2-dayX : dayX;
+      const yNorm = tFade ? lerp(cur.sunY, nxt.sunY, tFade) : cur.sunY;
+
+      const showStars = (cur.stars>0 || (tFade && nxt.stars>0));
+      if (showStars){
+        const aCur = cur.stars>0 ? (tFade? (1-tFade) : 1) : 0;
+        const aNxt = nxt.stars>0 ? tFade : 0;
+        if (aCur>0) drawStars(aCur);
+        if (aNxt>0) drawStars(aNxt);
+      }
+
+      const curMoon = cur.moon ? (tFade? (1-tFade):1) : 0;
+      const nxtMoon = nxt.moon ? tFade : 0;
+      const curSun  = !cur.moon ? (tFade? (1-tFade):1) : 0;
+      const nxtSun  = !nxt.moon ? tFade : 0;
+      if (curSun>0) drawSun(xNorm, yNorm, curSun);
+      if (nxtSun>0) drawSun(xNorm, yNorm, nxtSun);
+      if (curMoon>0) drawMoon(1-xNorm, yNorm, curMoon);
+      if (nxtMoon>0) drawMoon(1-xNorm, yNorm, nxtMoon);
+
+      drawClouds(cloudOffset1, cloudOffset2, 1);
+
+      if (tFade===0 && bgFadeMsLeft===0 && bgNextIndex!==0 && currentBgIndex!==bgNextIndex){
+        currentBgIndex = bgNextIndex;
+      }
     }
+
+    // pipes
+    ctx.fillStyle='#1f4fd1';
+    for(const p of pipes){
+      ctx.fillRect(p.x,0,p.width,p.y);
+      ctx.fillRect(p.x,p.y+p.gap,p.width,H-(p.y+p.gap));
+    }
+
+    // bonuses
+    for(const b of bonuses){
+      ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(b.angle);
+      const s=b.size; if(bonusImg.complete) ctx.drawImage(bonusImg,-s/2,-s/2,s,s);
+      else { ctx.fillStyle='#ff3b3b'; ctx.beginPath(); ctx.arc(0,0,s/2,0,Math.PI*2); ctx.fill(); }
+      ctx.restore();
+    }
+
+    // player
+    if (state.running) {
+      const s = player.r*2.2*1.15;
+      if (player.sprite && player.sprite.complete) {
+        ctx.drawImage(player.sprite, player.x - s/2, player.y - s/2, s, s);
+      } else {
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(player.x, player.y, player.r, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#111'; ctx.lineWidth = 2; ctx.stroke();
+      }
+    }
+  }  /* <-- ini penutup draw() yang hilang tadi */
+
+  /* ======= HELPERS (global) ======= */
+  function circleRect(cx,cy,cr, rx,ry,rw,rh){
+    const tx=Math.max(rx,Math.min(cx,rx+rw)), ty=Math.max(ry,Math.min(cy,ry+rh));
+    const dx=cx-tx, dy=cy-ty; return dx*dx+dy*dy <= cr*cr;
   }
-}
+  function dist(x1,y1,x2,y2){ const dx=x1-x2, dy=y1-y2; return Math.hypot(dx,dy); }
+  function escapeHtml(s){ return (s+'').replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
 
-/* ====================== HELPERS GEOMETRI ====================== */
-function circleRect(cx,cy,cr, rx,ry,rw,rh){ const tx=Math.max(rx,Math.min(cx,rx+rw)), ty=Math.max(ry,Math.min(cy,ry+rh)); const dx=cx-tx, dy=cy-ty; return dx*dx+dy*dy<=cr*cr; }
-function dist(x1,y1,x2,y2){ const dx=x1-x2, dy=y1-y2; return Math.hypot(dx,dy); }
+  /* === Drag-to-scroll karakter === */
+  const charRow = document.getElementById('charRow');
+  let isDown=false,startX=0,startLeft=0, dragged=false;
+  const onDown = (x)=>{ isDown=true; dragged=false; startX=x; startLeft=charRow.scrollLeft; };
+  const onMove = (x)=>{ if(!isDown) return; const dx = x - startX; if(Math.abs(dx)>5) dragged=true; charRow.scrollLeft = startLeft - dx; };
+  const onUp = ()=>{ isDown=false; if(dragged){ const radios = charRow.querySelectorAll('input[type="radio"]'); radios.forEach(r=>{ r.addEventListener('click', e=>{ e.stopPropagation(); e.preventDefault(); }, {once:true,capture:true}); }); } };
+  charRow.addEventListener('mousedown',e=>onDown(e.pageX));
+  window.addEventListener('mousemove',e=>onMove(e.pageX));
+  window.addEventListener('mouseup',onUp);
+  charRow.addEventListener('touchstart',e=>onDown(e.touches[0].pageX),{passive:true});
+  charRow.addEventListener('touchmove',e=>onMove(e.touches[0].pageX),{passive:true});
+  charRow.addEventListener('touchend',onUp);
 
-/* === Drag-to-scroll karakter === */
-const charRow=document.getElementById('charRow');
-let isDown=false,startX=0,startLeft=0,dragged=false;
-const onDown=x=>{isDown=true;dragged=false;startX=x;startLeft=charRow.scrollLeft;};
-const onMove=x=>{if(!isDown)return;const dx=x-startX;if(Math.abs(dx)>5)dragged=true;charRow.scrollLeft=startLeft-dx;};
-const onUp=()=>{isDown=false;if(dragged){const radios=charRow.querySelectorAll('input[type="radio"]');radios.forEach(r=>{r.addEventListener('click',e=>{e.stopPropagation();e.preventDefault();},{once:true,capture:true});});}};
-charRow.addEventListener('mousedown',e=>onDown(e.pageX));
-window.addEventListener('mousemove',e=>onMove(e.pageX));
-window.addEventListener('mouseup',onUp);
-charRow.addEventListener('touchstart',e=>onDown(e.touches[0].pageX),{passive:true});
-charRow.addEventListener('touchmove',e=>onMove(e.touches[0].pageX),{passive:true});
-charRow.addEventListener('touchend',onUp);
-
-/* === BGM unlock === */
-const bgm=document.getElementById('bgm');
-if(bgm){
-  bgm.volume=0.35; let started=false;
-  function unlockBgm(){ if(!started){ bgm.play().then(()=>{started=true}).catch(()=>{}); } }
-  window.addEventListener('touchstart',unlockBgm,{once:true,passive:true});
-  window.addEventListener('mousedown',unlockBgm,{once:true,passive:true});
-  window.addEventListener('keydown',unlockBgm,{once:true,passive:true});
-}
-})(); // IIFE
+  /* === BGM unlock === */
+  const bgm = document.getElementById('bgm');
+  if(bgm){
+    bgm.volume = 0.35;
+    let started = false;
+    function unlockBgm(){ if(!started){ bgm.play().then(()=>{ started = true; }).catch(()=>{}); } }
+    window.addEventListener('touchstart', unlockBgm, { once:true, passive:true });
+    window.addEventListener('mousedown',   unlockBgm, { once:true, passive:true });
+    window.addEventListener('keydown',     unlockBgm, { once:true, passive:true });
+  }
+})();
 </script>
 </body>
 </html>
