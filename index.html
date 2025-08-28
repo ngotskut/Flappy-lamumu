@@ -1,8 +1,8 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
 <title>Flappy Lamumu</title>
 <style>
   *,*::before,*::after{box-sizing:border-box}
@@ -11,44 +11,29 @@
   body{background:#6b8f99;font-family:system-ui,-apple-system,Segoe UI,Roboto,Inter,Arial,sans-serif;overflow:hidden}
   #wrap{position:fixed;inset:0}
   #game{position:absolute;inset:0;display:block;background:linear-gradient(#cfefff,#bde6fd)}
-  #score{
-    position:absolute;top:8px;left:50%;transform:translateX(-50%);
-    font-weight:700;font-size:16px;pointer-events:none;
-    color:#0b1222;text-shadow:0 1px 2px rgba(255,255,255,.25)
-  }
+  #score{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-weight:700;font-size:16px;pointer-events:none;color:#0b1222;text-shadow:0 1px 2px rgba(255,255,255,.25)}
   #overlay{position:absolute;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:8}
-  #startPanel{
-    width:min(680px,92vw);background:var(--ui-bg);backdrop-filter:saturate(1.2) blur(8px);
-    border-radius:var(--ui-radius);box-shadow:0 20px 60px rgba(0,0,0,.35);padding:22px 20px;z-index:9;text-align:center
-  }
+  #startPanel{width:min(680px,92vw);background:var(--ui-bg);backdrop-filter:saturate(1.2) blur(8px);border-radius:var(--ui-radius);box-shadow:0 20px 60px rgba(0,0,0,.35);padding:22px 20px;z-index:9;text-align:center}
   #startPanel h2{margin:6px 0 8px;font-size:22px}
   .muted{color:#4b5563;font-size:12px}
-
-  /* karakter slider */
   #charRow{display:flex;gap:12px;align-items:stretch;overflow-x:auto;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;padding-bottom:4px;margin-top:10px}
   #charRow::-webkit-scrollbar{height:0} #charRow{scrollbar-width:none}
   .card{flex:0 0 160px;border:1px solid #e5e7eb;border-radius:12px;padding:10px 10px 12px;text-align:center;background:#fff}
   .card img{width:72px;height:72px;object-fit:contain;display:block;margin:4px auto 8px}
   #startPanel .card div:last-child{font-size:0;line-height:1}
-  #startPanel .card div:last-child input[type="radio"]{transform:scale(1.35);vertical-align:middle}
-
+  #startPanel .card div:last-child input[type="radio"]{transform:scale(1.35)}
   .actions{display:flex;gap:10px;justify-content:center;margin-top:12px}
   .btn{appearance:none;border:0;border-radius:999px;padding:10px 16px;font-weight:600;background:#e5e7eb;cursor:pointer}
   .btn.primary{background:var(--brand);color:#fff}
   .btn[disabled]{opacity:.45;cursor:not-allowed}
-
-  input[type="text"]{width:100%;max-width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;background:#fff;font-size:14px}
+  input[type="text"]{width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;background:#fff;font-size:14px}
   input[type="text"].invalid{border-color:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.15)}
   #nameErr{display:none;color:#ef4444;font-size:12px;margin-top:6px}
-
-  /* leaderboard */
   #lbPanel h3{font-size:16px}
   #lbList table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:14px}
-  #lbList thead th,#lbList tbody td{padding:10px 14px;border-bottom:1px solid #eef2f7;vertical-align:middle;white-space:nowrap}
+  #lbList thead th,#lbList tbody td{padding:10px 14px;border-bottom:1px solid #eef2f7}
   #lbList thead th:nth-child(1),#lbList tbody td:nth-child(1){width:52px;text-align:center}
-  #lbList thead th:nth-child(2),#lbList tbody td:nth-child(2){width:auto;text-align:left}
   #lbList thead th:nth-child(3),#lbList tbody td:nth-child(3){width:96px;text-align:right;font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1,"lnum" 1}
-  #lbList thead th{background:#f6f8fb;font-weight:700}
 </style>
 </head>
 <body>
@@ -59,7 +44,7 @@
   <div id="overlay">
     <div id="startPanel">
       <h2>Flappy Lamumu 🐮</h2>
-      <div class="muted">Tap / Click anywhere on the game to flap · Press <b>C</b> to switch character quickly</div>
+      <div class="muted">Tap / Click to flap · Press <b>C</b> to switch character quickly</div>
 
       <div style="margin:12px 0 6px">
         <input id="playerName" type="text" placeholder="Enter your name (required for leaderboard)">
@@ -67,17 +52,17 @@
       </div>
 
       <div id="charRow" aria-label="Choose character">
-        <label class="card"><img src="assets/lamumu1.png" alt="Lamumu 1"><div><input type="radio" name="char" value="0" checked></div></label>
-        <label class="card"><img src="assets/lamumu2.png" alt="Lamumu 2"><div><input type="radio" name="char" value="1"></div></label>
-        <label class="card"><img src="assets/lamumu3.png" alt="Lamumu 3"><div><input type="radio" name="char" value="2"></div></label>
-        <label class="card"><img src="assets/lamumu4.png" alt="Lamumu 4"><div><input type="radio" name="char" value="3"></div></label>
+        <label class="card"><img src="assets/lamumu1.png" alt=""><div><input type="radio" name="char" value="0" checked></div></label>
+        <label class="card"><img src="assets/lamumu2.png" alt=""><div><input type="radio" name="char" value="1"></div></label>
+        <label class="card"><img src="assets/lamumu3.png" alt=""><div><input type="radio" name="char" value="2"></div></label>
+        <label class="card"><img src="assets/lamumu4.png" alt=""><div><input type="radio" name="char" value="3"></div></label>
       </div>
 
       <div class="actions">
         <button id="btnStart" class="btn primary" disabled>Start</button>
         <button id="btnLb" class="btn" type="button">Leaderboard</button>
       </div>
-      <div class="muted" style="text-align:center;margin-top:6px">Tip: You can change character during play by pressing <b>C</b>.</div>
+      <div class="muted" style="text-align:center;margin-top:6px">Tip: Press <b>C</b> in-game to change character.</div>
     </div>
   </div>
 
@@ -87,13 +72,12 @@
 
 <script>
 (() => {
-  console.log('FLAPPY BUILD = bricks-final');
-  document.title = 'Flappy Lamumu • bricks-final';
+  /* ===== Short helpers ===== */
+  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+  const sCurve01=t=>t*t*(3-2*t);                 // smoothstep
+  const remap01=(x,a,b)=>clamp((x-a)/(b-a),0,1); // 0..1
 
-  /* ========================= GAME CORE ========================= */
-  const CHAR_SRCS=['assets/lamumu1.png','assets/lamumu2.png','assets/lamumu3.png','assets/lamumu4.png'];
-  const BONUS_SRC='assets/bonus.png';
-
+  /* ===== Canvas / UI ===== */
   const canvas=document.getElementById('game');
   const ctx=canvas.getContext('2d');
   const scoreEl=document.getElementById('score');
@@ -101,64 +85,67 @@
   const btnStart=document.getElementById('btnStart');
   const nameInput=document.getElementById('playerName');
   const nameErr=document.getElementById('nameErr');
-  const startPanel=document.getElementById('startPanel');
   const btnLb=document.getElementById('btnLb');
-  const lbPanel=document.createElement('div');
-  lbPanel.id='lbPanel'; lbPanel.style.marginTop='14px'; lbPanel.style.display='none';
-  lbPanel.innerHTML=`<h3 style="margin:0 0 8px">Top 100 Leaderboard</h3>
-  <div id="lbList" style="max-height:240px;overflow:auto;border:1px solid #e5e7eb;border-radius:10px;background:#fff"><div class="muted" style="padding:10px">Loading…</div></div>`;
-  startPanel.appendChild(lbPanel);
-  const lbList=lbPanel.querySelector('#lbList');
+  const startPanel=document.getElementById('startPanel');
 
-  nameInput.value=localStorage.getItem('lamumu_name')||'';
-  const MIN_NAME=3;
-  function validateName(){
-    const ok=(nameInput.value.trim().length>=MIN_NAME);
-    btnStart.disabled=!ok; nameInput.classList.toggle('invalid',!ok);
-    nameErr.style.display=ok?'none':'block'; return ok;
-  }
-  nameInput.addEventListener('input',validateName);
-  nameInput.addEventListener('blur',validateName);
-  validateName();
+  /* ===== Game assets ===== */
+  const CHAR_SRCS=['assets/lamumu1.png','assets/lamumu2.png','assets/lamumu3.png','assets/lamumu4.png'];
+  const BONUS_SRC='assets/bonus.png';
+  const charImgs=CHAR_SRCS.map(s=>{const im=new Image(); im.src=s; return im;});
+  const bonusImg=new Image(); bonusImg.src=BONUS_SRC;
 
+  /* ===== State ===== */
   let W=0,H=0,DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
-
-  /* === Brick caches (global) === */
-  let brickPattern = null;                   // pola bata kecil (repeat)
-  const brickSurfCache = new Map();          // surface siap pakai per ukuran
-
-  /* === PIPE dynamic (satu-satunya definisi) === */
-  let PIPE = { width:0, gapBase:0, spawnMin:0, spawnMax:0 };
+  const state={running:false, score:0, speedBase:190, speedMax:420, speed:190, pipesPassed:0, speedPerPipe:2.2, gravity:900, flapVel:-400, charIndex:0};
+  const pipes=[], bonuses=[];
+  const player={ x:120, y:200, vy:0, r:22, sprite:null };
+  let brickPattern=null; const brickSurfCache=new Map();
+  let PIPE={ width:0, gapBase:0, spawnMin:0, spawnMax:0 };
 
   function resize(){
-    W = innerWidth|0; H = innerHeight|0;
-    canvas.width  = (W*DPR)|0; canvas.height = (H*DPR)|0;
-    canvas.style.width = W+'px'; canvas.style.height = H+'px';
+    W=innerWidth|0; H=innerHeight|0;
+    canvas.width=(W*DPR)|0; canvas.height=(H*DPR)|0;
+    canvas.style.width=W+'px'; canvas.style.height=H+'px';
     ctx.setTransform(DPR,0,0,DPR,0,0);
 
-    // ukuran pipa mengikuti layar
+    // pipe metrics
     PIPE.width    = Math.max(80,(W*0.08)|0);
     PIPE.gapBase  = Math.max(160,(H*0.28)|0);
     PIPE.spawnMin = Math.max(240,(W*0.36)|0);
     PIPE.spawnMax = Math.max(280,(W*0.42)|0);
 
-    // refresh caches agar tetap tajam
-    brickPattern = null;
-    brickSurfCache.clear();
+    // player metrics
+    player.x=Math.max(80,(W*0.18)|0);
+    player.r=Math.max(22,(Math.min(W,H)*0.024)|0);
+
+    // refresh caches (no “swimming” + tetap tajam)
+    brickPattern=null; brickSurfCache.clear();
   }
   addEventListener('resize',resize,{passive:true}); resize();
 
-  const state={running:false, score:0, time:0, speedBase:190, speedMax:420, speed:190, pipesPassed:0, speedPerPipe:2.2, gravity:900, flapVel:-400, charIndex:0};
+  /* ===== UI ===== */
+  nameInput.value=localStorage.getItem('lamumu_name')||'';
+  const validateName=()=>{
+    const ok=nameInput.value.trim().length>=3;
+    btnStart.disabled=!ok; nameInput.classList.toggle('invalid',!ok);
+    nameErr.style.display=ok?'none':'block'; return ok;
+  };
+  nameInput.addEventListener('input',validateName);
+  nameInput.addEventListener('blur',validateName); validateName();
 
-  const pipes=[];
-  const bonuses=[];
-  const BONUS={ sizeBase: Math.max(34,(Math.min(W,H)*0.1)|0), rotateSpeed:2.0, chance:0.65, yOffset:20 };
-  const player={ x:Math.max(80,(W*0.18)|0), y:(H*0.45)|0, vy:0, r:Math.max(22,(Math.min(W,H)*0.024)|0), sprite:null };
+  function startGame(){
+    if(!validateName()) return;
+    localStorage.setItem('lamumu_name', nameInput.value.trim());
+    const sel=document.querySelector('input[name="char"]:checked'); state.charIndex=sel?+sel.value:0;
+    player.sprite=charImgs[state.charIndex];
+    Object.assign(state,{running:true,score:0,pipesPassed:0,speed:state.speedBase});
+    player.y=(H*0.45)|0; player.vy=0; pipes.length=0; bonuses.length=0;
+    overlay.style.display='none';
+  }
+  btnStart.addEventListener('click',startGame);
 
-  const charImgs=CHAR_SRCS.map(s=>{const im=new Image(); im.src=s; return im;});
-  const bonusImg=new Image(); bonusImg.src=BONUS_SRC;
-
-  function flap(){ if(state.running){ player.vy=state.flapVel; } }
+  /* ===== Controls ===== */
+  const flap=()=>{ if(state.running) player.vy=state.flapVel; };
   canvas.addEventListener('mousedown',flap);
   canvas.addEventListener('touchstart',e=>{e.preventDefault();flap();},{passive:false});
   addEventListener('keydown',e=>{
@@ -166,99 +153,41 @@
     if(e.key==='c'||e.key==='C'){ state.charIndex=(state.charIndex+1)%charImgs.length; player.sprite=charImgs[state.charIndex];}
   });
 
-  btnStart.addEventListener('click',()=>{ if(validateName()) startGame(); });
+  /* ===== Leaderboard (dummy fetch endpoints) ===== */
+  const lbPanel=document.createElement('div'); lbPanel.id='lbPanel'; lbPanel.style.marginTop='14px'; lbPanel.style.display='none';
+  lbPanel.innerHTML=`<h3 style="margin:0 0 8px">Top 100 Leaderboard</h3>
+  <div id="lbList" style="max-height:240px;overflow:auto;border:1px solid #e5e7eb;border-radius:10px;background:#fff"><div class="muted" style="padding:10px">Loading…</div></div>`;
+  startPanel.appendChild(lbPanel);
+  const lbList=lbPanel.querySelector('#lbList');
   btnLb.addEventListener('click',openLeaderboard);
-
-  function startGame(){
-    localStorage.setItem('lamumu_name', nameInput.value.trim());
-    const sel=document.querySelector('input[name="char"]:checked'); state.charIndex=sel?+sel.value:0;
-    player.sprite=charImgs[state.charIndex];
-    state.running=true; state.score=0; state.time=0; state.pipesPassed=0; state.speed=state.speedBase;
-    player.x=Math.max(80,(W*0.18)|0); player.y=(H*0.45)|0; player.vy=0;
-    pipes.length=0; bonuses.length=0;
-    overlay.style.display='none';
-  }
-
-  const rand=(a,b)=>a+Math.random()*(b-a);
-  const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
-  const smooth01=t=>t*t*(3-2*t);
-
-  function needPipe(){ if(!pipes.length) return true; const last=pipes[pipes.length-1]; return (W-last.x) >= rand(PIPE.spawnMin,PIPE.spawnMax); }
-  function spawnPipe(){ const gap=PIPE.gapBase, top=rand(50, Math.max(50,H-gap-120)); const p={x:W+10,y:top,width:PIPE.width,gap,passed:false}; pipes.push(p); if(Math.random()<BONUS.chance) spawnBonusAtPipe(p); }
-  function spawnBonusAtPipe(p){ const mid=p.y+p.gap/2; const y=clamp(mid+(Math.random()-0.5)*2*BONUS.yOffset,p.y+20,p.y+p.gap-20); bonuses.push({x:p.x+PIPE.width+120,y,size:BONUS.sizeBase,angle:0}); }
-
-  let last=performance.now();
-  function loop(now){ const dt=Math.min(0.033,(now-last)/1000); last=now; if(state.running) update(dt); draw(); requestAnimationFrame(loop); }
-  requestAnimationFrame(loop);
-
-  function update(dt){
-    state.time+=dt;
-    state.speed=Math.min(state.speedMax, state.speedBase + state.pipesPassed*state.speedPerPipe);
-    if(needPipe()) spawnPipe();
-
-    for(let i=pipes.length-1;i>=0;i--){
-      const p=pipes[i]; p.x-=state.speed*dt;
-      if(p.x+p.width<-10) pipes.splice(i,1);
-      if(!p.passed && p.x+p.width<player.x){ p.passed=true; state.pipesPassed++; state.score+=1; }
-    }
-
-    player.vy+=state.gravity*dt; player.y+=player.vy*dt;
-
-    for(const p of pipes){
-      if(circleRect(player.x,player.y,player.r,p.x,0,p.width,p.y) ||
-         circleRect(player.x,player.y,player.r,p.x,p.y+p.gap,p.width,H-(p.y+p.gap))){ return gameOver(); }
-    }
-    if(player.y>H-2 || player.y<-20) return gameOver();
-
-    for(let i=bonuses.length-1;i>=0;i--){
-      const b=bonuses[i]; b.x-=state.speed*dt; b.angle += BONUS.rotateSpeed*dt;
-      if(dist(player.x,player.y,b.x,b.y) < (player.r + b.size*0.5*0.8)){ state.score+=100; bonuses.splice(i,1); continue; }
-      if(b.x<-80) bonuses.splice(i,1);
-    }
-
-    scoreEl.textContent='Score: '+state.score;
-
-    // parallax awan ikut kecepatan game
-    cloudOffset1 = (cloudOffset1 + state.speed * 0.15 * 0.50 * dt) % W;
-    cloudOffset2 = (cloudOffset2 + state.speed * 0.15 * 0.25 * dt) % W;
-  }
-
-  async function gameOver(){
-    state.running=false; overlay.style.display='flex'; validateName();
-    try{ const moo=document.getElementById('moo'); moo.currentTime=0; await moo.play(); }catch(_){}
-    try{ await saveScore((nameInput.value||'').trim(), state.score); }catch(e){ console.warn(e); }
-    openLeaderboard();
-  }
-  async function saveScore(name, score){ if(!name || name.length<3) return; await fetch('/api/leaderboard/submit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,score})}); }
   async function openLeaderboard(){
     lbPanel.style.display='block'; lbList.innerHTML='<div class="muted" style="padding:10px">Loading…</div>';
-    try{
-      const res=await fetch('/api/leaderboard/top?limit=100');
-      const data=await res.json();
+    try{ const res=await fetch('/api/leaderboard/top?limit=100'); const data=await res.json();
       const items=(Array.isArray(data?.items)?data.items:data).filter(it=>Number(it.score||0)>0);
-      renderLeaderboard(items);
-    }catch(e){ lbList.innerHTML='<div class="muted" style="padding:10px">Cannot load leaderboard.</div>'; }
-  }
-  function renderLeaderboard(items){
-    if(!items||!items.length){ lbList.innerHTML='<div class="muted" style="padding:10px">No scores yet.</div>'; return; }
-    const rows=items.map((it,i)=>`<tr><td>${i+1}</td><td>${escapeHtml(it.name||'anonymous')}</td><td>${Number(it.score||0)}</td></tr>`).join('');
-    lbList.innerHTML=`<table><thead><tr><th>#</th><th>Name</th><th>Score</th></tr></thead><tbody>${rows}</tbody></table>`;
+      if(!items.length){ lbList.innerHTML='<div class="muted" style="padding:10px">No scores yet.</div>'; return; }
+      const rows=items.map((it,i)=>`<tr><td>${i+1}</td><td>${(it.name||'anonymous')}</td><td>${Number(it.score||0)}</td></tr>`).join('');
+      lbList.innerHTML=`<table><thead><tr><th>#</th><th>Name</th><th>Score</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }catch{ lbList.innerHTML='<div class="muted" style="padding:10px">Cannot load leaderboard.</div>'; }
   }
 
-  /* =================== DAY/NIGHT BACKGROUND (FINAL) =================== */
-  const PHASE_MS = 16000;
-  const DAY_MS   = PHASE_MS * 4;
-  const BG_PARALLAX = 0.15;
-  const START_AT_NOON = 0.50;
+  /* ===== Random, geometry ===== */
+  const rand=(a,b)=>a+Math.random()*(b-a);
+  function circleRect(cx,cy,cr, rx,ry,rw,rh){const tx=Math.max(rx,Math.min(cx,rx+rw)),ty=Math.max(ry,Math.min(cy,ry+rh));const dx=cx-tx,dy=cy-ty;return dx*dx+dy*dy<=cr*cr;}
+  const dist=(x1,y1,x2,y2)=>Math.hypot(x1-x2,y1-y2);
 
+  /* ===== Pipes & bonus ===== */
+  function needPipe(){ if(!pipes.length) return true; const last=pipes[pipes.length-1]; return (W-last.x) >= rand(PIPE.spawnMin,PIPE.spawnMax); }
+  function spawnPipe(){ const gap=PIPE.gapBase, top=rand(50, Math.max(50,H-gap-120)); const p={x:W+10,y:top,width:PIPE.width,gap,passed:false}; pipes.push(p); if(Math.random()<0.65) spawnBonusAtPipe(p); }
+  function spawnBonusAtPipe(p){ const mid=p.y+p.gap/2; const y=clamp(mid+(Math.random()-0.5)*40,p.y+20,p.y+p.gap-20); bonuses.push({x:p.x+PIPE.width+120,y,size:Math.max(34,(Math.min(W,H)*0.1)|0),angle:0}); }
+
+  /* ===== Background timing ===== */
+  const PHASE_MS=16000, DAY_MS=PHASE_MS*4;
+  let dayClock=0.50*DAY_MS, bgTLast=performance.now(), brightness=1;
   let cloudOffset1=0, cloudOffset2=0;
-  let dayClock   = START_AT_NOON * DAY_MS;
-  let bgTLast    = performance.now();
-  let brightness = 1;
 
+  /* ===== Color helpers ===== */
   function hexToRgb(h){const p=n=>parseInt(n,16);return[p(h.slice(1,3)),p(h.slice(3,5)),p(h.slice(5,7))];}
   function mixColor(h1,h2,t){const [r1,g1,b1]=hexToRgb(h1),[r2,g2,b2]=hexToRgb(h2);const r=(r1+(r2-r1)*t)|0,g=(g1+(g2-g1)*t)|0,b=(b1+(b2-b1)*t)|0;return`rgb(${r},${g},${b})`;}
-  const remapSmooth=(x,a,b)=>{const t=Math.max(0,Math.min(1,(x-a)/(b-a)));return t*t*(3-2*t);};
 
   function drawSky(top,bottom){const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,top);g.addColorStop(1,bottom);ctx.fillStyle=g;ctx.fillRect(0,0,W,H);}
   function drawClouds(off1,off2,alpha){
@@ -294,6 +223,7 @@
   }
   const STARS=Array.from({length:120},()=>({x:Math.random(),y:Math.random()*0.6,tw:0.6+Math.random()*0.5}));
   function drawStars(alpha){ctx.save();ctx.fillStyle='#e8eefc';for(const s of STARS){const tw=0.6+Math.sin(performance.now()/400*s.tw)*0.4;ctx.globalAlpha=alpha*tw;ctx.fillRect(s.x*W,s.y*H,1.5,1.5);}ctx.restore();}
+
   let ridgeOff1=0,ridgeOff2=0,grassOff=0;
   function drawMountainsAndGrass(dt){
     ridgeOff1+=dt*12; ridgeOff2+=dt*6; grassOff+=dt*20;
@@ -324,206 +254,164 @@
 
     const prog=(dayClock%DAY_MS)/DAY_MS;
 
-    // 1) POSISI MATAHARI/BULAN
+    // Orbit elips matahari/bulan
     const cx=W*0.5, cy=H*0.62;
     const rx=W*0.42, ry=H*0.36;
     const angle=(prog-0.25)*2*Math.PI;
     const sunX=cx+Math.cos(angle)*rx;
-    const sunY=cy- Math.sin(angle)*ry;   // penting: minus
+    const sunY=cy- Math.sin(angle)*ry; // MINUS -> atas layar = lebih kecil y
 
-    // 2) ELEVASI → BRIGHTNESS (halus)
-    const rawElev=(cy-sunY)/(H*0.45);
-    const elev01=Math.max(0,Math.min(1,rawElev));
-    const easeInOutCubic=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
-    const dayCore=easeInOutCubic(elev01);
-    const dawnHelp=remapSmooth(rawElev,-0.22,0.10);
-    brightness=Math.max(0,Math.min(1,0.80*dayCore+0.20*dawnHelp+0.06));
+    // Elevasi → Brightness (super halus & robust)
+    const rawElev=(cy-sunY)/(H*0.45); // <0 di bawah, >0 di atas
+    brightness = sCurve01( remap01(rawElev, -0.05, 0.35) ); // langsung terang saat matahari naik
 
-    // 3) LANGIT DASAR
+    // Warna dasar langit
     const nightTop='#0a0f1e', nightBot='#121a2c';
     const dayTop  ='#9fd6ff', dayBot  ='#eef4ff';
     let skyTop=mixColor(nightTop,dayTop,brightness);
     let skyBot=mixColor(nightBot,dayBot,brightness);
 
-    // 4) TINT SENJA/SUBUH
+    // Tint senja/subuh (gaussian di dekat horizon)
     const gauss=(x,s)=>Math.exp(-(x*x)/(2*s*s));
-    const above=Math.max(0,Math.min(1,rawElev));
-    const below=Math.max(0,Math.min(1,-rawElev));
-    const sunsetK=gauss(rawElev-0.06,0.10)*above;  // sedikit di atas horizon
-    const dawnK  =gauss(rawElev+0.06,0.12)*below;  // sedikit di bawah horizon
+    const above=clamp(rawElev,0,1), below=clamp(-rawElev,0,1);
+    const sunsetK=gauss(rawElev-0.06,0.10)*above; // sedikit di atas horizon
+    const dawnK  =gauss(rawElev+0.06,0.12)*below; // sedikit di bawah horizon
     const SUNSET={top:'#ff9b5e', bot:'#ffd39a'};
     const DAWN  ={top:'#244b9a', bot:'#3e74c9'};
-    skyTop=mixColor(skyTop,SUNSET.top,Math.min(1,sunsetK*1.6));
-    skyBot=mixColor(skyBot,SUNSET.bot,Math.min(1,sunsetK*1.6));
+    skyTop=mixColor(skyTop,SUNSET.top,Math.min(1,sunsetK*2.0));
+    skyBot=mixColor(skyBot,SUNSET.bot,Math.min(1,sunsetK*2.0));
     skyTop=mixColor(skyTop,DAWN.top,  Math.min(1,dawnK*1.0));
     skyBot=mixColor(skyBot,DAWN.bot,  Math.min(1,dawnK*1.0));
 
-    // 5) gambar langit
+    // Langit + objek
     drawSky(skyTop,skyBot);
 
-    // 6) bintang & awan
-    const starAlpha=1-remapSmooth(rawElev,-0.10,0.02);
+    const starAlpha=1-sCurve01(remap01(rawElev,-0.10,0.02));
     if(starAlpha>0.02) drawStars(starAlpha);
     const cloudA=0.20+0.75*brightness;
+    cloudOffset1 = (cloudOffset1 + state.speed * 0.15 * 0.50 * dt) % W;
+    cloudOffset2 = (cloudOffset2 + state.speed * 0.15 * 0.25 * dt) % W;
     drawClouds(cloudOffset1,cloudOffset2,cloudA);
 
-    // 7) matahari/bulan
-    const sunA = remapSmooth(rawElev, 0.02,0.14);
-    const moonA= 1-remapSmooth(rawElev,-0.06,0.10);
-    if(sunA>0.01)  drawSun(sunX,sunY,sunA);
+    const sunA=sCurve01(remap01(rawElev,0.02,0.14));
+    const moonA=1-sCurve01(remap01(rawElev,-0.06,0.10));
+    if(sunA>0.01) drawSun(sunX,sunY,sunA);
     if(moonA>0.01){
       const moonX=cx+Math.cos(angle+Math.PI)*rx;
       const moonY=cy- Math.sin(angle+Math.PI)*ry;
       drawMoonCrescent(moonX,moonY,moonA,0.56,-0.18);
     }
 
-    // 8) landscape
     drawMountainsAndGrass(dt);
 
-    // 9) kontras skor
     scoreEl.style.color=(brightness<0.55)?'#fff':'#0b1222';
     scoreEl.style.textShadow=(brightness<0.55)?'0 1px 2px rgba(0,0,0,.6)':'0 1px 2px rgba(255,255,255,.25)';
   }
 
-  // DEBUG HOOKS
+  // Debug helpers
   window.clockFreeze = on => { window.__freeze = !!on; };
   window.setNoon     = () => { dayClock = 0.50 * DAY_MS; };
   window.setSunset   = () => { dayClock = 0.75 * DAY_MS; };
   window.setMidnight = () => { dayClock = 0.00 * DAY_MS; };
   window.setDawn     = () => { dayClock = 0.25 * DAY_MS; };
 
-  /* === PIPE: Brick pattern (tidak “berenang”) =================== */
-  const PIPE_BRICK = { brick:'#c04d35', brickShadow:'#9f3b29', mortar:'#e9e4df' };
-  function makeBrickPattern(scale = 1){
-    const tileW = 24*scale, tileH = 12*scale;
-    const gap   = 2*scale;
-    const oc = document.createElement('canvas');
-    oc.width  = tileW*2; oc.height = tileH*2;
-    const c = oc.getContext('2d');
-
-    c.fillStyle = PIPE_BRICK.mortar; c.fillRect(0,0,oc.width,oc.height);
-
-    const brick = (x,y,w,h)=>{
-      const g = c.createLinearGradient(x, y, x, y+h);
-      g.addColorStop(0, PIPE_BRICK.brick);
-      g.addColorStop(1, PIPE_BRICK.brickShadow);
-      c.fillStyle = g; c.fillRect(x,y,w,h);
-      c.fillStyle = 'rgba(255,255,255,.06)'; c.fillRect(x,y,w,1*scale);
-    };
-
-    const bw = tileW-gap, bh = tileH-gap;
-    brick(0,0,bw,bh);
-    brick(tileW+gap,0,bw,bh);
-    brick(tileW/2,tileH+gap,bw,bh);
-    brick(tileW*1.5+gap,tileH+gap,bw,bh);
-
-    c.fillStyle = 'rgba(0,0,0,.05)';
-    for(let x=0;x<=oc.width;x+=tileW)  c.fillRect(x,0,1,oc.height);
-    for(let y=0;y<=oc.height;y+=tileH) c.fillRect(0,y,oc.width,1);
-
+  /* ===== Brick pipes (no “swimming”) ===== */
+  const PIPE_BRICK={ brick:'#c04d35', brickShadow:'#9f3b29', mortar:'#e9e4df' };
+  function makeBrickPattern(scale=1){
+    const tileW=24*scale, tileH=12*scale, gap=2*scale;
+    const oc=document.createElement('canvas'); oc.width=tileW*2; oc.height=tileH*2;
+    const c=oc.getContext('2d');
+    c.fillStyle=PIPE_BRICK.mortar; c.fillRect(0,0,oc.width,oc.height);
+    const brick=(x,y,w,h)=>{const g=c.createLinearGradient(x,y,x,y+h); g.addColorStop(0,PIPE_BRICK.brick); g.addColorStop(1,PIPE_BRICK.brickShadow); c.fillStyle=g; c.fillRect(x,y,w,h); c.fillStyle='rgba(255,255,255,.06)'; c.fillRect(x,y,w,1*scale);};
+    const bw=tileW-gap,bh=tileH-gap;
+    brick(0,0,bw,bh); brick(tileW+gap,0,bw,bh); brick(tileW/2,tileH+gap,bw,bh); brick(tileW*1.5+gap,tileH+gap,bw,bh);
+    c.fillStyle='rgba(0,0,0,.05)'; for(let x=0;x<=oc.width;x+=tileW) c.fillRect(x,0,1,oc.height); for(let y=0;y<=oc.height;y+=tileH) c.fillRect(0,y,oc.width,1);
     return c.createPattern(oc,'repeat');
   }
-
   function makeBrickSurface(w,h){
-    const key = `${Math.round(w)}x${Math.round(h)}`;
-    const hit = brickSurfCache.get(key);
-    if (hit) return hit;
-
-    if (!brickPattern){
-      const s = Math.max(1, Math.round(window.devicePixelRatio||1));
-      brickPattern = makeBrickPattern(s);
-    }
-    const oc = document.createElement('canvas');
-    oc.width = Math.max(1,w|0);
-    oc.height = Math.max(1,h|0);
-    const c = oc.getContext('2d');
-
-    // isi bata dari origin 0,0 → tidak ikut geser saat pipa bergerak
-    c.fillStyle = brickPattern; c.fillRect(0,0,oc.width,oc.height);
-
-    // shading pinggir & garis tepi
-    const edge = c.createLinearGradient(0,0,oc.width,0);
-    edge.addColorStop(0,'rgba(0,0,0,.28)');
-    edge.addColorStop(0.10,'rgba(0,0,0,0)');
-    edge.addColorStop(0.90,'rgba(0,0,0,0)');
-    edge.addColorStop(1,'rgba(0,0,0,.28)');
-    c.fillStyle = edge; c.fillRect(0,0,oc.width,oc.height);
-    c.lineWidth = 2; c.strokeStyle = 'rgba(0,0,0,.35)';
-    c.strokeRect(0.5,0.5,oc.width-1,oc.height-1);
-
-    brickSurfCache.set(key, oc);
-    return oc;
+    const key=`${Math.round(w)}x${Math.round(h)}`; const hit=brickSurfCache.get(key); if(hit) return hit;
+    if(!brickPattern){ const s=Math.max(1,Math.round(window.devicePixelRatio||1)); brickPattern=makeBrickPattern(s); }
+    const oc=document.createElement('canvas'); oc.width=Math.max(1,w|0); oc.height=Math.max(1,h|0); const c=oc.getContext('2d');
+    c.fillStyle=brickPattern; c.fillRect(0,0,oc.width,oc.height);
+    const edge=c.createLinearGradient(0,0,oc.width,0); edge.addColorStop(0,'rgba(0,0,0,.28)'); edge.addColorStop(0.10,'rgba(0,0,0,0)'); edge.addColorStop(0.90,'rgba(0,0,0,0)'); edge.addColorStop(1,'rgba(0,0,0,.28)');
+    c.fillStyle=edge; c.fillRect(0,0,oc.width,oc.height);
+    c.lineWidth=2; c.strokeStyle='rgba(0,0,0,.35)'; c.strokeRect(0.5,0.5,oc.width-1,oc.height-1);
+    brickSurfCache.set(key,oc); return oc;
   }
   function drawBrickPipe(x,y,w,h){
-    if (h<=0 || w<=0) return;
-    const surf = makeBrickSurface(w,h);
-    ctx.drawImage(surf, x, y);
-
-    // overlay dim SERAGAM agar semua pipa konsisten dengan kecerahan malam
-    const dim = 0.45 * (1 - (typeof brightness==='number'?brightness:1));
-    if (dim > 0){
-      ctx.fillStyle = `rgba(0,0,0,${dim.toFixed(3)})`;
-      ctx.fillRect(x,y,w,h);
-    }
+    if(h<=0||w<=0) return;
+    const surf=makeBrickSurface(w,h);
+    ctx.drawImage(surf,x,y);
+    // overlay dim seragam mengikuti brightness global
+    const dim=0.45*(1-brightness);
+    if(dim>0){ ctx.fillStyle=`rgba(0,0,0,${dim.toFixed(3)})`; ctx.fillRect(x,y,w,h); }
   }
 
-  /* ====================== DRAW ====================== */
+  /* ===== Game loop ===== */
+  let last=performance.now();
+  function update(dt){
+    state.speed=Math.min(state.speedMax,state.speedBase+state.pipesPassed*state.speedPerPipe);
+    if(needPipe()) spawnPipe();
+    for(let i=pipes.length-1;i>=0;i--){
+      const p=pipes[i]; p.x-=state.speed*dt;
+      if(p.x+p.width<-10) pipes.splice(i,1);
+      if(!p.passed && p.x+p.width<player.x){ p.passed=true; state.pipesPassed++; state.score++; }
+    }
+    player.vy+=state.gravity*dt; player.y+=player.vy*dt;
+    for(const p of pipes){
+      if(circleRect(player.x,player.y,player.r,p.x,0,p.width,p.y) || circleRect(player.x,player.y,player.r,p.x,p.y+p.gap,p.width,H-(p.y+p.gap))){ gameOver(); return; }
+    }
+    if(player.y>H-2 || player.y<-20){ gameOver(); return; }
+    for(let i=bonuses.length-1;i>=0;i--){
+      const b=bonuses[i]; b.x-=state.speed*dt; b.angle += 2*dt;
+      if(dist(player.x,player.y,b.x,b.y) < (player.r + b.size*0.5*0.8)){ state.score+=100; bonuses.splice(i,1); continue; }
+      if(b.x<-80) bonuses.splice(i,1);
+    }
+    scoreEl.textContent='Score: '+state.score;
+  }
+  async function gameOver(){
+    state.running=false; overlay.style.display='flex'; validateName();
+    try{ const moo=document.getElementById('moo'); moo.currentTime=0; await moo.play(); }catch{}
+  }
+
   function draw(){
     ctx.clearRect(0,0,W,H);
     renderBackground();
-
-    // PIPES: brick
     for(const p of pipes){
-      drawBrickPipe(p.x, 0,           p.width, p.y);
-      drawBrickPipe(p.x, p.y+p.gap,   p.width, H-(p.y+p.gap));
+      drawBrickPipe(p.x,0,p.width,p.y);
+      drawBrickPipe(p.x,p.y+p.gap,p.width,H-(p.y+p.gap));
     }
-
-    // BONUS
     for(const b of bonuses){
       ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(b.angle);
       const s=b.size; if(bonusImg.complete && bonusImg.naturalWidth) ctx.drawImage(bonusImg,-s/2,-s/2,s,s);
       else { ctx.fillStyle='#ff3b3b'; ctx.beginPath(); ctx.arc(0,0,s/2,0,Math.PI*2); ctx.fill(); }
       ctx.restore();
     }
-
-    // PLAYER
     if(state.running){
       const s=player.r*2.2*1.15;
-      if(player.sprite && player.sprite.complete && player.sprite.naturalWidth){
-        ctx.drawImage(player.sprite, player.x-s/2, player.y-s/2, s, s);
-      }else{
-        ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(player.x,player.y,player.r,0,Math.PI*2); ctx.fill();
-        ctx.strokeStyle='#111'; ctx.lineWidth=2; ctx.stroke();
-      }
+      if(player.sprite && player.sprite.complete && player.sprite.naturalWidth) ctx.drawImage(player.sprite,player.x-s/2,player.y-s/2,s,s);
+      else { ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(player.x,player.y,player.r,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='#111'; ctx.lineWidth=2; ctx.stroke(); }
     }
   }
 
-  /* ===================== HELPERS ===================== */
-  function circleRect(cx,cy,cr, rx,ry,rw,rh){ const tx=Math.max(rx,Math.min(cx,rx+rw)), ty=Math.max(ry,Math.min(cy,ry+rh)); const dx=cx-tx, dy=cy-ty; return dx*dx+dy*dy<=cr*cr; }
-  function dist(x1,y1,x2,y2){ const dx=x1-x2, dy=y1-y2; return Math.hypot(dx,dy); }
-  function escapeHtml(s){ return (s+'').replace(/[&<>"']/g,c=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c])); }
+  function loop(now){
+    const dt=Math.min(0.033,(now-last)/1000); last=now;
+    if(state.running) update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
 
-  /* drag-to-scroll karakter */
-  const charRow=document.getElementById('charRow');
-  let isDown=false,startX=0,startLeft=0,dragged=false;
-  const onDown=x=>{isDown=true;dragged=false;startX=x;startLeft=charRow.scrollLeft;};
-  const onMove=x=>{if(!isDown)return;const dx=x-startX;if(Math.abs(dx)>5)dragged=true;charRow.scrollLeft=startLeft-dx;};
-  const onUp=()=>{isDown=false;if(dragged){const radios=charRow.querySelectorAll('input[type="radio"]');radios.forEach(r=>{r.addEventListener('click',e=>{e.stopPropagation();e.preventDefault();},{once:true,capture:true});});}};
-  charRow.addEventListener('mousedown',e=>onDown(e.pageX));
-  window.addEventListener('mousemove',e=>onMove(e.pageX));
-  window.addEventListener('mouseup',onUp);
-  charRow.addEventListener('touchstart',e=>onDown(e.touches[0].pageX),{passive:true});
-  charRow.addEventListener('touchmove',e=>onMove(e.touches[0].pageX),{passive:true});
-  charRow.addEventListener('touchend',onUp);
-
-  /* BGM unlock */
+  // start button
+  // (leaderboard fetch sudah di atas)
+  // bgm unlock
   const bgm=document.getElementById('bgm');
   if(bgm){
     bgm.volume=0.35; let started=false;
-    function unlockBgm(){ if(!started){ bgm.play().then(()=>{started=true}).catch(()=>{}); } }
-    window.addEventListener('touchstart',unlockBgm,{once:true,passive:true});
-    window.addEventListener('mousedown',unlockBgm,{once:true,passive:true});
-    window.addEventListener('keydown',unlockBgm,{once:true,passive:true});
+    function unlock(){ if(!started){ bgm.play().then(()=>started=true).catch(()=>{}); } }
+    addEventListener('touchstart',unlock,{once:true,passive:true});
+    addEventListener('mousedown',unlock,{once:true,passive:true});
+    addEventListener('keydown',unlock,{once:true,passive:true});
   }
 })();
 </script>
