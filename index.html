@@ -23,7 +23,6 @@
   }
   #startPanel h2{margin:6px 0 8px;font-size:22px}
   .muted{color:#4b5563;font-size:12px}
-
   #charRow{display:flex;gap:12px;align-items:stretch;overflow-x:auto;-webkit-overflow-scrolling:touch;scroll-behavior:smooth;padding-bottom:4px;margin-top:10px}
   #charRow::-webkit-scrollbar{height:0} #charRow{scrollbar-width:none}
   .card{flex:0 0 160px;border:1px solid #e5e7eb;border-radius:12px;padding:10px 10px 12px;text-align:center;background:#fff}
@@ -31,17 +30,13 @@
   #startPanel .card .muted{display:none!important}
   #startPanel .card div:last-child{font-size:0;line-height:1}
   #startPanel .card div:last-child input[type="radio"]{transform:scale(1.35);vertical-align:middle}
-
   .actions{display:flex;gap:10px;justify-content:center;margin-top:12px}
   .btn{appearance:none;border:0;border-radius:999px;padding:10px 16px;font-weight:600;background:#e5e7eb;cursor:pointer}
   .btn.primary{background:var(--brand);color:#fff}
   .btn[disabled]{opacity:.45;cursor:not-allowed}
-
   input[type="text"]{width:100%;max-width:100%;padding:12px;border:1px solid #d1d5db;border-radius:10px;background:#fff;font-size:14px}
   input[type="text"].invalid{border-color:#ef4444;box-shadow:0 0 0 3px rgba(239,68,68,.15)}
-
   #nameErr{display:none;color:#ef4444;font-size:12px;margin-top:6px}
-
   #lbPanel h3{font-size:16px}
   #lbList table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:14px}
   #lbList thead th,#lbList tbody td{padding:10px 14px;border-bottom:1px solid #eef2f7;vertical-align:middle;white-space:nowrap}
@@ -87,8 +82,8 @@
 
 <script>
 (() => {
-  console.log('FLAPPY BUILD = bricks-v10');
-  document.title = 'Flappy Lamumu • bricks-v10';
+  console.log('FLAPPY BUILD = bricks-final');
+  document.title = 'Flappy Lamumu • bricks-final';
 
 /* ========================= GAME CORE ========================= */
 const CHAR_SRCS=['assets/lamumu1.png','assets/lamumu2.png','assets/lamumu3.png','assets/lamumu4.png'];
@@ -123,10 +118,11 @@ validateName();
 
 let W=0,H=0,DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
 
-/* === Brick pattern cache (global) === */
-let brickPattern = null;
+/* === Brick caches (global) === */
+let brickPattern = null;                 // pattern kecil berulang
+const brickSurfCache = new Map();        // cache surface sesuai ukuran
 
-/* === PIPE dynamic (hanya SATU definisi) === */
+/* === PIPE dynamic (satu-satunya definisi) === */
 let PIPE = { width:0, gapBase:0, spawnMin:0, spawnMax:0 };
 
 function resize(){
@@ -135,14 +131,15 @@ function resize(){
   canvas.style.width = W+'px'; canvas.style.height = H+'px';
   ctx.setTransform(DPR,0,0,DPR,0,0);
 
-  // hitung ulang ukuran pipa sesuai W/H terbaru
+  // ukuran pipa mengikuti layar
   PIPE.width    = Math.max(80,(W*0.08)|0);
   PIPE.gapBase  = Math.max(160,(H*0.28)|0);
   PIPE.spawnMin = Math.max(240,(W*0.36)|0);
   PIPE.spawnMax = Math.max(280,(W*0.42)|0);
 
-  // refresh pattern biar tetap tajam
+  // refresh pattern & surface agar tetap tajam
   brickPattern = null;
+  brickSurfCache.clear();
 }
 addEventListener('resize',resize,{passive:true}); resize();
 
@@ -180,6 +177,7 @@ function startGame(){
 const rand=(a,b)=>a+Math.random()*(b-a);
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
 const smooth01=t=>t*t*(3-2*t);
+
 function needPipe(){ if(!pipes.length) return true; const last=pipes[pipes.length-1]; return (W-last.x) >= rand(PIPE.spawnMin,PIPE.spawnMax); }
 function spawnPipe(){ const gap=PIPE.gapBase, top=rand(50, Math.max(50,H-gap-120)); const p={x:W+10,y:top,width:PIPE.width,gap,passed:false}; pipes.push(p); if(Math.random()<BONUS.chance) spawnBonusAtPipe(p); }
 function spawnBonusAtPipe(p){ const mid=p.y+p.gap/2; const y=clamp(mid+(Math.random()-0.5)*2*BONUS.yOffset,p.y+20,p.y+p.gap-20); bonuses.push({x:p.x+PIPE.width+120,y,size:BONUS.sizeBase,angle:0}); }
@@ -329,43 +327,38 @@ function renderBackground(){
 
   const prog = (dayClock % DAY_MS) / DAY_MS;
 
-// --- brightness dari elevasi matahari (halus) ---
-const rawElev   = (cy - sunY) / (H * 0.45);     // <0: di bawah horizon
-const elevNorm  = clamp(rawElev, 0, 1);
-const daylight  = smooth01(elevNorm);
-const sunriseBoost = remapSmooth(rawElev, -0.15, 0.08) * 0.35; // bantu subuh pelan
-brightness = clamp(daylight * 0.92 + sunriseBoost + 0.06, 0, 1);
+  // orbit elips matahari/bulan
+  const cx = W * 0.5,  cy = H * 0.62;
+  const rx = W * 0.42, ry = H * 0.36;
+  const angle = (prog - 0.25) * 2 * Math.PI;
+  const sunX  = cx + Math.cos(angle) * rx;
+  const sunY  = cy - Math.sin(angle) * ry;
 
-// warna dasar (siang ↔ malam)
-const nightTop = '#0a0f1e', nightBot = '#121a2c';
-const dayTop   = '#9fd6ff', dayBot   = '#eef4ff';
-let skyTop = mixColor(nightTop, dayTop, brightness);
-let skyBot = mixColor(nightBot, dayBot, brightness);
+  // ketinggian → brightness (halus)
+  const rawElev   = (cy - sunY) / (H * 0.45);
+  const elevNorm  = clamp(rawElev, 0, 1);
+  const daylight  = smooth01(elevNorm);
+  const sunriseBoost = remapSmooth(rawElev, -0.15, 0.08) * 0.35;
+  brightness = clamp(daylight * 0.92 + sunriseBoost + 0.06, 0, 1);
 
-// tint horizon: hangat saat terbenam, dingin saat terbit
-const nearH   = clamp(1 - Math.abs(rawElev) / 0.30, 0, 1); // dekat horizon
-const above   = clamp(rawElev,  0, 1);   // matahari di atas
-const below   = clamp(-rawElev, 0, 1);   // di bawah
-const sunsetMix = nearH * smooth01(1 - clamp(above / 0.22, 0, 1)); // menjelang turun
-const dawnMix   = nearH * smooth01(1 - clamp(below / 0.22, 0, 1)); // menjelang naik
+  // warna dasar
+  const nightTop = '#0a0f1e', nightBot = '#121a2c';
+  const dayTop   = '#9fd6ff', dayBot   = '#eef4ff';
+  let skyTop = mixColor(nightTop, dayTop, brightness);
+  let skyBot = mixColor(nightBot, dayBot, brightness);
 
-const SUNSET = { top:'#ff9b5e', bot:'#ffd39a' };   // jingga
-const DAWN   = { top:'#244b9a', bot:'#3e74c9' };   // biru subuh
+  // tint horizon (senja & subuh)
+  const nearH   = clamp(1 - Math.abs(rawElev) / 0.30, 0, 1);
+  const above   = clamp(rawElev,  0, 1);
+  const below   = clamp(-rawElev, 0, 1);
+  const sunsetMix = nearH * smooth01(1 - clamp(above / 0.22, 0, 1));
+  const dawnMix   = nearH * smooth01(1 - clamp(below / 0.22, 0, 1));
+  const SUNSET = { top:'#ff9b5e', bot:'#ffd39a' };
+  const DAWN   = { top:'#244b9a', bot:'#3e74c9' };
+  if (sunsetMix > 0){ const k=Math.min(1,sunsetMix*1.6); skyTop=mixColor(skyTop,SUNSET.top,k); skyBot=mixColor(skyBot,SUNSET.bot,k); }
+  if (dawnMix   > 0){ const k=Math.min(1,dawnMix*1.0);   skyTop=mixColor(skyTop,DAWN.top,k);   skyBot=mixColor(skyBot,DAWN.bot,k);   }
 
-// perkuat jingga – naikkan gain agar jelas
-if (sunsetMix > 0){
-  const k = Math.min(1, sunsetMix * 1.6); // ← lebih kuat dari sebelumnya
-  skyTop = mixColor(skyTop, SUNSET.top, k);
-  skyBot = mixColor(skyBot, SUNSET.bot, k);
-}
-// subuh tetap lembut
-if (dawnMix > 0){
-  const k = Math.min(1, dawnMix * 1.0);
-  skyTop = mixColor(skyTop, DAWN.top, k);
-  skyBot = mixColor(skyBot, DAWN.bot, k);
-}
-
-drawSky(skyTop, skyBot);
+  drawSky(skyTop, skyBot);
 
   const starAlpha = 1 - remapSmooth(rawElev, -0.10, 0.02);
   if (starAlpha > 0.02) drawStars(starAlpha);
@@ -387,16 +380,11 @@ drawSky(skyTop, skyBot);
   scoreEl.style.textShadow = (brightness < 0.55)
     ? '0 1px 2px rgba(0,0,0,.6)'
     : '0 1px 2px rgba(255,255,255,.25)';
-} // end renderBackground
+}
 
-/* === Brick pattern & renderer (no swimming) =================== */
-const PIPE_BRICK = {
-  brick:       '#c04d35',
-  brickShadow: '#9f3b29',
-  mortar:      '#e9e4df'
-};
+/* === PIPE: Brick pattern (tidak "berenang") =================== */
+const PIPE_BRICK = { brick:'#c04d35', brickShadow:'#9f3b29', mortar:'#e9e4df' };
 
-// tile kecil (diulang) – sama seperti sebelumnya
 function makeBrickPattern(scale = 1){
   const tileW = 24*scale, tileH = 12*scale;
   const gap   = 2*scale;
@@ -429,11 +417,7 @@ function makeBrickPattern(scale = 1){
   return c.createPattern(oc,'repeat');
 }
 
-let brickPattern = null;                 // ← cache tile
-const brickSurfCache = new Map();        // ← cache permukaan sesuai ukuran
-
 function makeBrickSurface(w,h){
-  // bulatkan agar cache efektif
   const key = `${Math.round(w)}x${Math.round(h)}`;
   const hit = brickSurfCache.get(key);
   if (hit) return hit;
@@ -447,11 +431,10 @@ function makeBrickSurface(w,h){
   oc.height = Math.max(1,h|0);
   const c = oc.getContext('2d');
 
-  // isi bata – origin (0,0) sehingga tidak “berenang”
+  // isi bata (origin 0,0) → tidak ikut geser pipa
   c.fillStyle = brickPattern;
   c.fillRect(0,0,oc.width,oc.height);
 
-  // shading pinggir
   const edge = c.createLinearGradient(0,0,oc.width,0);
   edge.addColorStop(0,'rgba(0,0,0,.28)');
   edge.addColorStop(0.10,'rgba(0,0,0,0)');
@@ -459,7 +442,6 @@ function makeBrickSurface(w,h){
   edge.addColorStop(1,'rgba(0,0,0,.28)');
   c.fillStyle = edge; c.fillRect(0,0,oc.width,oc.height);
 
-  // dim sesuai brightness malam
   const dim = 0.45 * (1 - (typeof brightness==='number'?brightness:1));
   if (dim>0){ c.fillStyle = `rgba(0,0,0,${dim.toFixed(3)})`; c.fillRect(0,0,oc.width,oc.height); }
 
@@ -482,7 +464,7 @@ function draw(){
   ctx.clearRect(0,0,W,H);
   renderBackground();
 
-  // PIPES (brick)
+  // PIPES: brick
   for(const p of pipes){
     drawBrickPipe(p.x, 0,           p.width, p.y);
     drawBrickPipe(p.x, p.y+p.gap,   p.width, H-(p.y+p.gap));
@@ -491,8 +473,7 @@ function draw(){
   // BONUS
   for(const b of bonuses){
     ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(b.angle);
-    const s=b.size;
-    if(bonusImg.complete && bonusImg.naturalWidth) ctx.drawImage(bonusImg,-s/2,-s/2,s,s);
+    const s=b.size; if(bonusImg.complete && bonusImg.naturalWidth) ctx.drawImage(bonusImg,-s/2,-s/2,s,s);
     else { ctx.fillStyle='#ff3b3b'; ctx.beginPath(); ctx.arc(0,0,s/2,0,Math.PI*2); ctx.fill(); }
     ctx.restore();
   }
