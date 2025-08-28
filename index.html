@@ -119,7 +119,8 @@ validateName();
 let W=0,H=0,DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
 
 /* === Brick caches (global) === */
-let brickPattern = null;                 // pattern kecil berulang
+let brickPattern = null;        // pattern kecil berulang
+brickSurfCache.clear();   // ← WAJIB
 const brickSurfCache = new Map();        // cache surface sesuai ukuran
 
 /* === PIPE dynamic (satu-satunya definisi) === */
@@ -238,29 +239,31 @@ function renderLeaderboard(items){
   lbList.innerHTML=`<table><thead><tr><th>#</th><th>Name</th><th>Score</th></tr></thead><tbody>${rows}</tbody></table>`;
 }
 
-/* =================== DAY/NIGHT BACKGROUND =================== */
+/* =================== DAY/NIGHT BACKGROUND (FINAL) =================== */
 const PHASE_MS = 16000;
 const DAY_MS   = PHASE_MS * 4;
 const BG_PARALLAX = 0.15;
-const START_AT_NOON = 0.50;
+const START_AT_NOON = 0.50;      // 0..1 (0.50 = mulai siang)
 
 let cloudOffset1=0, cloudOffset2=0;
-let dayClock     = START_AT_NOON * DAY_MS;
-let bgTLast      = performance.now();
-let brightness   = 1; // 0..1
+let dayClock   = START_AT_NOON * DAY_MS;
+let bgTLast    = performance.now();
+let brightness = 1; // 0..1
 
-function hexToRgb(h){const p=n=>parseInt(n,16); return [p(h.slice(1,3)),p(h.slice(3,5)),p(h.slice(5,7))];}
-function mixColor(h1,h2,t){const [r1,g1,b1]=hexToRgb(h1),[r2,g2,b2]=hexToRgb(h2);const r=(r1+(r2-r1)*t)|0,g=(g1+(g2-g1)*t)|0,b=(b1+(b2-b1)*t)|0;return `rgb(${r},${g},${b})`;}
-function remapSmooth(x,a,b){return smooth01(clamp((x-a)/(b-a),0,1));}
+function hexToRgb(h){const p=n=>parseInt(n,16);return[p(h.slice(1,3)),p(h.slice(3,5)),p(h.slice(5,7))];}
+function mixColor(h1,h2,t){const [r1,g1,b1]=hexToRgb(h1),[r2,g2,b2]=hexToRgb(h2);const r=(r1+(r2-r1)*t)|0,g=(g1+(g2-g1)*t)|0,b=(b1+(b2-b1)*t)|0;return`rgb(${r},${g},${b})`;}
+const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
+const smooth01=t=>t*t*(3-2*t);
+const remapSmooth=(x,a,b)=>smooth01(clamp((x-a)/(b-a),0,1));
 
 function drawSky(top,bottom){const g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,top);g.addColorStop(1,bottom);ctx.fillStyle=g;ctx.fillRect(0,0,W,H);}
 function drawClouds(off1,off2,alpha){
-  ctx.save(); ctx.globalAlpha = alpha;
+  ctx.save(); ctx.globalAlpha=alpha;
   const cloud=(x,y,s)=>{ctx.beginPath();ctx.fillStyle='rgba(255,255,255,0.92)';ctx.arc(x,y,s,0,Math.PI*2);ctx.arc(x+s*0.8,y+s*0.2,s*0.9,0,Math.PI*2);ctx.arc(x-s*0.7,y+s*0.25,s*0.75,0,Math.PI*2);ctx.fill();};
-  const baseY1=H*0.18, baseY2=H*0.28;
-  for(let i=-1;i<=4;i++){ cloud((i*0.35*W)+(off1%W), baseY1, Math.min(W,H)*0.07); }
-  ctx.globalAlpha = alpha*0.85;
-  for(let i=-1;i<=4;i++){ cloud((i*0.50*W)+(off2%W), baseY2, Math.min(W,H)*0.055); }
+  const y1=H*0.18,y2=H*0.28;
+  for(let i=-1;i<=4;i++) cloud((i*0.35*W)+(off1%W),y1,Math.min(W,H)*0.07);
+  ctx.globalAlpha=alpha*0.85;
+  for(let i=-1;i<=4;i++) cloud((i*0.50*W)+(off2%W),y2,Math.min(W,H)*0.055);
   ctx.restore();
 }
 function drawSun(x,y,a){
@@ -272,7 +275,7 @@ function drawSun(x,y,a){
   ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,R*1.6,0,Math.PI*2); ctx.fill();
   ctx.restore();
 }
-function drawMoonCrescent(x,y,a,thin=0.62,tilt=-0.18){
+function drawMoonCrescent(x,y,a,thin=0.56,tilt=-0.18){
   const R=Math.min(W,H)*0.06;
   ctx.save(); ctx.translate(x,y); ctx.rotate(tilt); ctx.globalAlpha=a;
   ctx.globalCompositeOperation='source-over';
@@ -285,121 +288,108 @@ function drawMoonCrescent(x,y,a,thin=0.62,tilt=-0.18){
   ctx.fillStyle=g; ctx.beginPath(); ctx.arc(-R*0.15,0,R*1.1,0,Math.PI*2); ctx.fill();
   ctx.restore();
 }
-const STARS = Array.from({length:120},()=>({x:Math.random(), y:Math.random()*0.6, tw:0.6+Math.random()*0.5}));
-function drawStars(alpha){
-  ctx.save(); ctx.fillStyle='#e8eefc';
-  for(const s of STARS){ const tw=0.6+Math.sin(performance.now()/400*s.tw)*0.4; ctx.globalAlpha=alpha*tw; ctx.fillRect(s.x*W,s.y*H,1.5,1.5); }
-  ctx.restore();
-}
-let ridgeOff1=0, ridgeOff2=0, grassOff=0;
+const STARS=Array.from({length:120},()=>({x:Math.random(),y:Math.random()*0.6,tw:0.6+Math.random()*0.5}));
+function drawStars(alpha){ctx.save();ctx.fillStyle='#e8eefc';for(const s of STARS){const tw=0.6+Math.sin(performance.now()/400*s.tw)*0.4;ctx.globalAlpha=alpha*tw;ctx.fillRect(s.x*W,s.y*H,1.5,1.5);}ctx.restore();}
+let ridgeOff1=0,ridgeOff2=0,grassOff=0;
 function drawMountainsAndGrass(dt){
-  ridgeOff1 += dt*12; ridgeOff2 += dt*6; grassOff += dt*20;
-  const farCol  = mixColor('#1c273a','#0e1524', 1-brightness);
-  const nearCol = mixColor('#2c574f','#152a2c', 1-brightness);
+  ridgeOff1+=dt*12; ridgeOff2+=dt*6; grassOff+=dt*20;
+  const farCol=mixColor('#1c273a','#0e1524',1-brightness);
+  const nearCol=mixColor('#2c574f','#152a2c',1-brightness);
   ctx.save();
   ctx.fillStyle=farCol; ctx.beginPath(); ctx.moveTo(0,H*0.72);
-  for(let x=0;x<=W;x+=14){ const y=H*0.72 - 28*Math.sin((x+ridgeOff2)*0.004) - 18*Math.cos((x+ridgeOff2)*0.007); ctx.lineTo(x,y); }
-  ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath(); ctx.fill();
+  for(let x=0;x<=W;x+=14){const y=H*0.72-28*Math.sin((x+ridgeOff2)*0.004)-18*Math.cos((x+ridgeOff2)*0.007);ctx.lineTo(x,y);} ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath(); ctx.fill();
   ctx.fillStyle=nearCol; ctx.beginPath(); ctx.moveTo(0,H*0.80);
-  for(let x=0;x<=W;x+=10){ const y=H*0.80 - 36*Math.sin((x+ridgeOff1)*0.006) - 20*Math.cos((x+ridgeOff1)*0.010); ctx.lineTo(x,y); }
-  ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath(); ctx.fill(); ctx.restore();
+  for(let x=0;x<=W;x+=10){const y=H*0.80-36*Math.sin((x+ridgeOff1)*0.006)-20*Math.cos((x+ridgeOff1)*0.010);ctx.lineTo(x,y);} ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath(); ctx.fill(); ctx.restore();
 
   ctx.save();
   const g=ctx.createLinearGradient(0,H*0.82,0,H);
-  g.addColorStop(0, mixColor('#67c941','#2a7f2e', 1-brightness));
-  g.addColorStop(1, mixColor('#3fae34','#175c24', 1-brightness));
+  g.addColorStop(0,mixColor('#67c941','#2a7f2e',1-brightness));
+  g.addColorStop(1,mixColor('#3fae34','#175c24',1-brightness));
   ctx.fillStyle=g; ctx.beginPath(); ctx.moveTo(0,H*0.88);
-  for(let x=0;x<=W;x+=8){ const y=H*0.88 + 12*Math.sin((x+grassOff)*0.004); ctx.lineTo(x,y); }
-  ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath(); ctx.fill();
-
-  ctx.globalAlpha = 0.14*(0.55 + 0.45*brightness);
-  ctx.strokeStyle='#ffffff'; ctx.lineWidth=1;
-  for(let x=6;x<W;x+=12){ const y=H*0.88 + 12*Math.sin((x+grassOff)*0.004); const len=3 + ((x%24)<12?1:0);
-    ctx.beginPath(); ctx.moveTo(x,y+3); ctx.lineTo(x,y-len); ctx.stroke(); }
+  for(let x=0;x<=W;x+=8){const y=H*0.88+12*Math.sin((x+grassOff)*0.004);ctx.lineTo(x,y);} ctx.lineTo(W,H); ctx.lineTo(0,H); ctx.closePath(); ctx.fill();
+  ctx.globalAlpha=0.14*(0.55+0.45*brightness); ctx.strokeStyle='#ffffff'; ctx.lineWidth=1;
+  for(let x=6;x<W;x+=12){const y=H*0.88+12*Math.sin((x+grassOff)*0.004);const len=3+((x%24)<12?1:0);ctx.beginPath();ctx.moveTo(x,y+3);ctx.lineTo(x,y-len);ctx.stroke();}
   ctx.restore();
 }
 
 function renderBackground(){
-  const now = performance.now();
-  const dt  = Math.min(0.05, (now - bgTLast) / 1000);
-  bgTLast   = now;
-  if (!window.__freeze) dayClock = (dayClock + dt * 1000) % DAY_MS;
+  const now=performance.now();
+  const dt=Math.min(0.05,(now-bgTLast)/1000);
+  bgTLast=now;
+  if(!window.__freeze) dayClock=(dayClock+dt*1000)%DAY_MS;
 
-  const prog = (dayClock % DAY_MS) / DAY_MS;
+  const prog=(dayClock%DAY_MS)/DAY_MS;
 
-  // orbit elips matahari/bulan
-  const cx = W * 0.5,  cy = H * 0.62;
-  const rx = W * 0.42, ry = H * 0.36;
-  const angle = (prog - 0.25) * 2 * Math.PI;
-  const sunX  = cx + Math.cos(angle) * rx;
-  const sunY  = cy - Math.sin(angle) * ry;
+  // 1) POSISI MATAHARI/BULAN
+  const cx=W*0.5, cy=H*0.62;
+  const rx=W*0.42, ry=H*0.36;
+  const angle=(prog-0.25)*2*Math.PI;
+  const sunX=cx+Math.cos(angle)*rx;
+  const sunY=cy- Math.sin(angle)*ry;   // ← penting: minus
 
-  // --- elevasi & brightness (lebih halus) ---
-  const rawElev  = (cy - sunY) / (H * 0.45); // <0 di bawah horizon, >0 di atas
-  const elev01   = clamp(rawElev, 0, 1);
-  const easeInOutCubic = t => t<0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2,3)/2;
-  const dayCore  = easeInOutCubic(elev01);            // inti siang halus
-  const dawnHelp = remapSmooth(rawElev, -0.22, 0.10); // bantu subuh
-  brightness = clamp(0.78*dayCore + 0.22*dawnHelp, 0, 1);
+  // 2) ELEVASI → BRIGHTNESS (sangat halus)
+  const rawElev=(cy-sunY)/(H*0.45);
+  const elev01=clamp(rawElev,0,1);
+  const easeInOutCubic=t=>t<.5?4*t*t*t:1-Math.pow(-2*t+2,3)/2;
+  const dayCore=easeInOutCubic(elev01);
+  const dawnHelp=remapSmooth(rawElev,-0.22,0.10);
+  brightness=clamp(0.80*dayCore+0.20*dawnHelp+0.06,0,1);
 
-  // warna dasar siang ↔ malam
+  // 3) WARNA LANGIT (dasar)
   const nightTop='#0a0f1e', nightBot='#121a2c';
   const dayTop  ='#9fd6ff', dayBot  ='#eef4ff';
-  let skyTop = mixColor(nightTop, dayTop, brightness);
-  let skyBot = mixColor(nightBot, dayBot, brightness);
+  let skyTop=mixColor(nightTop,dayTop,brightness);
+  let skyBot=mixColor(nightBot,dayBot,brightness);
 
-  // --- tint horizon (gaussian di sekitar 0 -> jingga yang nyata) ---
-  const gauss = (x,s)=>Math.exp(-(x*x)/(2*s*s));
-  const above = clamp(rawElev,  0, 1);
-  const below = clamp(-rawElev, 0, 1);
+  // 4) TINT SENJA/SUBUH
+  const gauss=(x,s)=>Math.exp(-(x*x)/(2*s*s));   // halus di dekat 0 (horizon)
+  const above=clamp(rawElev, 0,1);
+  const below=clamp(-rawElev,0,1);
+  const sunsetK=gauss(rawElev-0.06,0.10)*above;  // puncak sedikit di atas horizon
+  const dawnK  =gauss(rawElev+0.06,0.12)*below;
+  const SUNSET={top:'#ff9b5e', bot:'#ffd39a'};
+  const DAWN  ={top:'#244b9a', bot:'#3e74c9'};
+  skyTop=mixColor(skyTop,SUNSET.top,Math.min(1,sunsetK*1.6));
+  skyBot=mixColor(skyBot,SUNSET.bot,Math.min(1,sunsetK*1.6));
+  skyTop=mixColor(skyTop,DAWN.top,  Math.min(1,dawnK  *1.0));
+  skyBot=mixColor(skyBot,DAWN.bot,  Math.min(1,dawnK  *1.0));
 
-  // kekuatan jingga saat senja (puncak di rawElev≈0.06 lalu turun)
-  const sunsetK = gauss(rawElev-0.06, 0.10) * above;     // hanya saat di atas
-  // kebiruan subuh (puncak di rawElev≈-0.06)
-  const dawnK   = gauss(rawElev+0.06, 0.12) * below;     // hanya saat di bawah
+  // 5) Gambar langit
+  drawSky(skyTop,skyBot);
 
-  const SUNSET = { top:'#ff9b5e', bot:'#ffd39a' };
-  const DAWN   = { top:'#244b9a', bot:'#3e74c9' };
+  // 6) Bintang, awan
+  const starAlpha=1-remapSmooth(rawElev,-0.10,0.02);
+  if(starAlpha>0.02) drawStars(starAlpha);
+  const cloudA=0.20+0.75*brightness;
+  drawClouds(cloudOffset1,cloudOffset2,cloudA);
 
-  // perkuat senja → jadi benar-benar jingga
-  skyTop = mixColor(skyTop, SUNSET.top, Math.min(1, sunsetK*1.8));
-  skyBot = mixColor(skyBot, SUNSET.bot, Math.min(1, sunsetK*1.8));
-  // subuh lembut kebiruan
-  skyTop = mixColor(skyTop, DAWN.top,   Math.min(1, dawnK*1.0));
-  skyBot = mixColor(skyBot, DAWN.bot,   Math.min(1, dawnK*1.0));
-
-  // gambar langit
-  drawSky(skyTop, skyBot);
-
-  // bintang & awan
-  const starAlpha = 1 - remapSmooth(rawElev, -0.10, 0.02);
-  if (starAlpha > 0.02) drawStars(starAlpha);
-  const cloudA = 0.20 + 0.75 * brightness;
-  drawClouds(cloudOffset1, cloudOffset2, cloudA);
-
-  // matahari / bulan
-  const sunA  = remapSmooth(rawElev,  0.02, 0.14);
-  const moonA = 1 - remapSmooth(rawElev, -0.06, 0.10);
-  if (sunA  > 0.01) drawSun(sunX, sunY, sunA);
-  if (moonA > 0.01){
-    const moonX = cx + Math.cos(angle + Math.PI) * rx;
-    const moonY = cy - Math.sin(angle + Math.PI) * ry;
-    drawMoonCrescent(moonX, moonY, moonA, 0.56, -0.18);
+  // 7) Matahari/Bulan
+  const sunA = remapSmooth(rawElev, 0.02,0.14);
+  const moonA= 1-remapSmooth(rawElev,-0.06,0.10);
+  if(sunA>0.01)  drawSun(sunX,sunY,sunA);
+  if(moonA>0.01){
+    const moonX=cx+Math.cos(angle+Math.PI)*rx;
+    const moonY=cy- Math.sin(angle+Math.PI)*ry;
+    drawMoonCrescent(moonX,moonY,moonA,0.56,-0.18);
   }
 
-  // pegunungan & rumput mengikuti brightness
+  // 8) Landscape
   drawMountainsAndGrass(dt);
 
-  // visibilitas skor
-  scoreEl.style.color = (brightness < 0.55) ? '#fff' : '#0b1222';
-  scoreEl.style.textShadow = (brightness < 0.55)
-    ? '0 1px 2px rgba(0,0,0,.6)'
-    : '0 1px 2px rgba(255,255,255,.25)';
+  // 9) Kontras skor
+  scoreEl.style.color=(brightness<0.55)?'#fff':'#0b1222';
+  scoreEl.style.textShadow=(brightness<0.55)?'0 1px 2px rgba(0,0,0,.6)':'0 1px 2px rgba(255,255,255,.25)';
 }
 
+// DEBUG HOOKS agar perintah Console tidak “undefined error”
+window.clockFreeze = on => { window.__freeze = !!on; };
+window.setNoon     = () => { dayClock = 0.50 * DAY_MS; };
+window.setSunset   = () => { dayClock = 0.75 * DAY_MS; };
+window.setMidnight = () => { dayClock = 0.00 * DAY_MS; };
+window.setDawn     = () => { dayClock = 0.25 * DAY_MS; };
+ 
 /* === PIPE: Brick pattern (tidak "berenang") =================== */
 const PIPE_BRICK = { brick:'#c04d35', brickShadow:'#9f3b29', mortar:'#e9e4df' };
-
 function makeBrickPattern(scale = 1){
   const tileW = 24*scale, tileH = 12*scale;
   const gap   = 2*scale;
